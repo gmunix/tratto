@@ -194,11 +194,11 @@ h3 {
 .invite-card {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  box-shadow: none;
 }
 
 .panel {
-  border-radius: var(--radius-md);
+  border-radius: 0;
 }
 
 .panel__header {
@@ -236,20 +236,20 @@ h3 {
   gap: 8px;
   min-height: 42px;
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   padding: 0 18px;
   cursor: pointer;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   transition:
-    transform 150ms ease,
     border-color 150ms ease,
-    background 150ms ease;
+    background 150ms ease,
+    color 150ms ease;
 }
 
 .button:hover:not(:disabled) {
-  transform: translateY(-1px);
+  border-color: var(--color-accent);
 }
 
 .button:disabled {
@@ -309,9 +309,14 @@ h3 {
   color: var(--color-accent);
 }
 
-.nav-glyph {
-  font-size: 1.05rem;
-  line-height: 1;
+.bottom-nav__icon {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .hero {
@@ -321,6 +326,11 @@ h3 {
   align-items: center;
   min-height: calc(100vh - 65px);
   padding: 56px 0;
+}
+
+.hero--single {
+  grid-template-columns: minmax(0, 760px);
+  min-height: auto;
 }
 
 .hero__copy {
@@ -345,7 +355,7 @@ h3 {
 .bureau-card {
   overflow: hidden;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
 }
@@ -398,7 +408,7 @@ h3 {
 }
 
 .stat-card {
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   padding: 16px;
 }
 
@@ -414,7 +424,7 @@ h3 {
 .invite-card {
   display: grid;
   gap: 12px;
-  border-radius: var(--radius-md);
+  border-radius: 0;
   padding: 18px;
   transition:
     transform 150ms ease,
@@ -424,7 +434,6 @@ h3 {
 .case-card:hover,
 .invite-card:hover {
   border-color: var(--color-accent);
-  transform: translateY(-1px);
 }
 
 .case-card__header,
@@ -458,7 +467,7 @@ h3 {
   align-items: center;
   justify-content: center;
   white-space: nowrap;
-  border-radius: 999px;
+  border-radius: 0;
   padding: 4px 9px;
   font-family: var(--font-mono);
   font-size: 0.66rem;

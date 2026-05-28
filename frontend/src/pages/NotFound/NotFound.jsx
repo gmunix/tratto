@@ -8,8 +8,8 @@ export function NotFound() {
         <p className="section-subtitle">
           Este documento não consta no arquivo oficial do Tratto.
         </p>
-        <Link className="button button--primary" to="/dashboard">
-          Voltar ao painel
+        <Link className="button button--primary" to="/login">
+          Ir para entrada
         </Link>
       </section>
     </main>

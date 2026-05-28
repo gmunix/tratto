@@ -1,9 +1,9 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 
 const navItems = [
-  { label: 'Painel', path: '/dashboard', glyph: 'C' },
-  { label: 'Novo', path: '/novo', glyph: '+' },
-  { label: 'Perfil', path: '/perfil', glyph: 'P' },
+  { label: 'Painel', path: '/dashboard', Icon: LayoutGridIcon },
+  { label: 'Novo', path: '/novo', Icon: PlusIcon },
+  { label: 'Perfil', path: '/perfil', Icon: UserIcon },
 ]
 
 export function AppLayout({ title, eyebrow = 'TRATTO', backTo, actions, children }) {
@@ -49,12 +49,41 @@ export function AppLayout({ title, eyebrow = 'TRATTO', backTo, actions, children
             key={item.path}
             to={item.path}
           >
-            <span className="nav-glyph">{item.glyph}</span>
+            <item.Icon />
             <span>{item.label}</span>
           </NavLink>
         ))}
       </nav>
     </div>
+  )
+}
+
+function LayoutGridIcon() {
+  return (
+    <svg className="bottom-nav__icon" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3" y="3" width="7" height="7" />
+      <rect x="14" y="3" width="7" height="7" />
+      <rect x="14" y="14" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" />
+    </svg>
+  )
+}
+
+function PlusIcon() {
+  return (
+    <svg className="bottom-nav__icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
+  )
+}
+
+function UserIcon() {
+  return (
+    <svg className="bottom-nav__icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M20 21a8 8 0 0 0-16 0" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
   )
 }
 

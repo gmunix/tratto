@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 
-import { PixelMascot } from '@components/layout/AppLayout'
 import { StatusBadge } from '@components/common/StatusBadge'
 import { mockTrattos } from '@/data/mockTrattos'
 
@@ -16,7 +15,7 @@ export function Home() {
           </Link>
           <div className="button-row" style={{ alignItems: 'center' }}>
             <span className="muted-label">Reg. TRT-0001</span>
-            <Link className="button button--primary" to="/dashboard">
+            <Link className="button button--primary" to="/login">
               Entrar
             </Link>
           </div>
@@ -24,14 +23,11 @@ export function Home() {
       </header>
 
       <main className="page-container">
-        <section className="hero">
+        <section className="hero hero--single">
           <div className="hero__copy">
-            <div className="button-row" style={{ alignItems: 'center' }}>
-              <PixelMascot />
-              <div>
-                <p className="kicker">Cartório social de combinados</p>
-                <p className="muted-label">Legalmente inútil. Socialmente vinculante.</p>
-              </div>
+            <div>
+              <p className="kicker">Cartório social de combinados</p>
+              <p className="muted-label">Legalmente inútil. Socialmente vinculante.</p>
             </div>
 
             <div className="stack stack--large">
@@ -44,10 +40,10 @@ export function Home() {
             </div>
 
             <div className="hero__actions">
-              <Link className="button button--primary" to="/dashboard">
+              <Link className="button button--primary" to="/login">
                 Abrir painel
               </Link>
-              <Link className="button button--secondary" to="/novo">
+              <Link className="button button--secondary" to="/login">
                 Registrar trato
               </Link>
             </div>
@@ -59,18 +55,6 @@ export function Home() {
             </p>
           </div>
 
-          <aside className="bureau-card" aria-label="Paleta visual do Tratto">
-            <div className="bureau-card__stripe" />
-            <div className="bureau-card__stripe" />
-            <div className="bureau-card__stripe" />
-            <div className="bureau-card__stripe" />
-            <div className="bureau-card__body">
-              <span className="section-title">Dano à amizade: moderado</span>
-              <p className="section-subtitle">
-                Sistema sério demais para combinados pouco sérios.
-              </p>
-            </div>
-          </aside>
         </section>
 
         <section className="stack stack--large">
