@@ -1,26 +1,21 @@
 import { environment } from './environment'
 
-const themeAliases = {
-  print: 'screenshot',
-}
-
-const supportedColorSchemes = ['reference', 'screenshot']
+const supportedColorSchemes = ['grime', 'cassete']
 
 export function getColorScheme() {
   const requestedScheme = String(environment.colorScheme || '').toLowerCase()
-  const normalizedScheme = themeAliases[requestedScheme] ?? requestedScheme
 
-  if (supportedColorSchemes.includes(normalizedScheme)) {
-    return normalizedScheme
+  if (supportedColorSchemes.includes(requestedScheme)) {
+    return requestedScheme
   }
 
   if (requestedScheme) {
     console.warn(
-      `[Tratto] Unsupported VITE_COLOR_SCHEME "${requestedScheme}". Falling back to "reference".`,
+      `[Tratto] Unsupported VITE_COLOR_SCHEME "${requestedScheme}". Falling back to "grime".`,
     )
   }
 
-  return 'reference'
+  return 'grime'
 }
 
 export function applyColorScheme() {
@@ -28,5 +23,5 @@ export function applyColorScheme() {
 
   document.documentElement.dataset.theme = colorScheme
   document.documentElement.style.colorScheme =
-    colorScheme === 'screenshot' ? 'light' : 'dark'
+    colorScheme === 'cassete' ? 'light' : 'dark'
 }

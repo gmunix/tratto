@@ -16,8 +16,8 @@ Frontend base do projeto Tratto, criado com React + Vite para a atividade de con
 
 O frontend aceita `VITE_COLOR_SCHEME` no `.env` para trocar a paleta visual:
 
-- `reference`: tema escuro inspirado na referência visual
-- `screenshot` ou `print`: tema claro baseado no print de cores
+- `grime`: tema escuro inspirado na referência visual
+- `cassete`: tema claro baseado no print de cores
 
 Alterar essa variável exige reiniciar o servidor Vite.
 
