@@ -1,0 +1,1 @@
+export { TrattoDetail } from './TrattoDetail'

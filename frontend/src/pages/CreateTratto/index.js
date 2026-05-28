@@ -1,0 +1,1 @@
+export { CreateTratto } from './CreateTratto'
