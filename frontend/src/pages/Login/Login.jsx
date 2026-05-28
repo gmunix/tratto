@@ -20,7 +20,7 @@ export function Login() {
       </header>
 
       <main className="page-container">
-        <section className="panel" style={{ maxWidth: 460 }}>
+        <section className="panel login-panel">
           <form className="panel__body form-grid" onSubmit={handleSubmit}>
             <div>
               <h1 className="section-title">Entrar no cartório</h1>

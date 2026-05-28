@@ -166,6 +166,11 @@ h3 {
   padding: 28px 0 48px;
 }
 
+.login-panel {
+  max-width: 460px;
+  margin: clamp(24px, 5vh, 56px) auto 0;
+}
+
 .page-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
