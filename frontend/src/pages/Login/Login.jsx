@@ -1,5 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 
+import { Panel } from '@components/layout/Panel'
+
 export function Login() {
   const navigate = useNavigate()
 
@@ -20,15 +22,15 @@ export function Login() {
       </header>
 
       <main className="page-container">
-        <section className="panel login-panel">
-          <form className="panel__body form-grid" onSubmit={handleSubmit}>
-            <div>
-              <h1 className="section-title">Entrar no cartório</h1>
-              <p className="section-subtitle">
-                Login visual apenas. Por enquanto qualquer tentativa abre o painel.
-              </p>
-            </div>
-
+        <Panel
+          as="form"
+          bodyClassName="form-grid"
+          className="login-panel"
+          onSubmit={handleSubmit}
+          subtitle="Login visual apenas. Por enquanto qualquer tentativa abre o painel."
+          title="Entrar no cartório"
+          titleAs="h1"
+        >
             <div className="field">
               <label className="field__label" htmlFor="login-email">
                 E-mail ou usuário
@@ -66,8 +68,7 @@ export function Login() {
             <Link className="button button--ghost button--full" to="/">
               Voltar para a home
             </Link>
-          </form>
-        </section>
+        </Panel>
       </main>
     </div>
   )

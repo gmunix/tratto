@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom'
 import { ProgressBar } from '@components/common/ProgressBar'
 import { StatusBadge } from '@components/common/StatusBadge'
 import { AppLayout } from '@components/layout/AppLayout'
+import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
 import { decisionMethodLabels, getTrattoById } from '@/data/mockTrattos'
 
@@ -58,8 +59,7 @@ export function TrattoDetail() {
     <AppLayout backTo="/dashboard" title={tratto.caseNumber}>
       <PageContainer className="page-grid">
         <div className="stack stack--large">
-          <section className="panel">
-            <div className="panel__body stack stack--large">
+          <Panel bodyClassName="stack stack--large">
               <div className="case-card__header">
                 <div className="stack" style={{ gap: 8 }}>
                   <span className="muted-label">{tratto.category}</span>
@@ -70,27 +70,19 @@ export function TrattoDetail() {
 
               <p className="case-card__description">{tratto.description}</p>
               <ProgressBar label="Andamento do trato" value={tratto.progress} />
-            </div>
-          </section>
+          </Panel>
 
           {isClosed ? (
-            <section className="panel">
-              <div className="panel__body">
-                <p className="section-title">Veredito registrado</p>
-                <p className="section-subtitle">
-                  Este caso foi arquivado para consultas futuras e eventuais
-                  constrangimentos em reuniões de amigos.
-                </p>
-              </div>
-            </section>
+            <Panel
+              subtitle="Este caso foi arquivado para consultas futuras e eventuais constrangimentos em reuniões de amigos."
+              title="Veredito registrado"
+            />
           ) : null}
 
-          <section className="panel">
-            <div className="panel__header">
-              <h2 className="section-title">Registro de evidências</h2>
-              <span className="muted-label">{allEvidence.length} itens</span>
-            </div>
-            <div className="panel__body">
+          <Panel
+            actions={<span className="muted-label">{allEvidence.length} itens</span>}
+            title="Registro de evidências"
+          >
               {allEvidence.length ? (
                 <div className="timeline">
                   {allEvidence.map((evidence) => (
@@ -111,15 +103,10 @@ export function TrattoDetail() {
               ) : (
                 <div className="empty-state">Nenhuma evidência enviada ainda.</div>
               )}
-            </div>
-          </section>
+          </Panel>
 
           {isOpen ? (
-            <form className="panel" onSubmit={submitEvidence}>
-              <div className="panel__header">
-                <h2 className="section-title">Enviar evidência</h2>
-              </div>
-              <div className="panel__body form-grid">
+            <Panel as="form" bodyClassName="form-grid" onSubmit={submitEvidence} title="Enviar evidência">
                 <div className="chip-row">
                   {Object.entries(evidenceTypeLabels).map(([type, label]) => (
                     <button
@@ -149,46 +136,34 @@ export function TrattoDetail() {
                 >
                   Enviar ao conselho
                 </button>
-              </div>
-            </form>
+            </Panel>
           ) : null}
         </div>
 
         <aside className="stack stack--large">
-          <section className="panel">
-            <div className="panel__header">
-              <h2 className="section-title">Detalhes do caso</h2>
-            </div>
-            <div className="panel__body stack">
+          <Panel bodyClassName="stack" title="Detalhes do caso">
               <InfoRow label="Partes" value={tratto.participants.join(' contra ')} />
               <InfoRow label="Prazo" value={tratto.deadline} />
               <InfoRow label="Registrado em" value={tratto.createdAt} />
               <InfoRow label="Consequência" value={tratto.consequence} />
               <InfoRow label="Decisão" value={decisionMethodLabels[tratto.decisionMethod]} />
               {tratto.judge ? <InfoRow label="Juiz" value={tratto.judge} /> : null}
-            </div>
-          </section>
+          </Panel>
 
-          <section className="panel">
-            <div className="panel__header">
-              <h2 className="section-title">Regras</h2>
-            </div>
-            <div className="panel__body stack">
+          <Panel bodyClassName="stack" title="Regras">
               {tratto.rules.split('\n').map((rule) => (
                 <p className="notice" key={rule}>
                   {rule}
                 </p>
               ))}
-            </div>
-          </section>
+          </Panel>
 
           {tratto.status === 'active' ? (
-            <section className="panel">
-              <div className="panel__body stack">
-                <p className="section-title">Solicitar julgamento</p>
-                <p className="section-subtitle">
-                  Ação mockada. Futuramente enviaremos isso para a rota de votos ou veredito.
-                </p>
+            <Panel
+              bodyClassName="stack"
+              subtitle="Ação mockada. Futuramente enviaremos isso para a rota de votos ou veredito."
+              title="Solicitar julgamento"
+            >
                 <div className="button-row button-row--stack-mobile">
                   <button className="button button--primary" type="button">
                     Chamar veredito
@@ -197,8 +172,7 @@ export function TrattoDetail() {
                     Estender prazo
                   </button>
                 </div>
-              </div>
-            </section>
+            </Panel>
           ) : null}
         </aside>
       </PageContainer>

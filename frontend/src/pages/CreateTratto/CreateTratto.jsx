@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { AppLayout } from '@components/layout/AppLayout'
+import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
 import { decisionMethodLabels, trattoCategories } from '@/data/mockTrattos'
 
@@ -74,42 +75,37 @@ export function CreateTratto() {
     return (
       <AppLayout backTo="/dashboard" title="Trato registrado">
         <PageContainer>
-          <section className="panel" style={{ maxWidth: 680 }}>
-            <div className="panel__body stack stack--large">
-              <div>
-                <p className="section-title">Protocolo {protocol}</p>
-                <h1 className="case-card__title" style={{ marginTop: 8 }}>
-                  {form.title}
-                </h1>
-                <p className="section-subtitle">
-                  O trato foi enviado ao cartório social. Participantes serão
-                  notificados assim que o backend existir.
-                </p>
-              </div>
+          <Panel
+            bodyClassName="stack stack--large"
+            className="panel--narrow"
+            subtitle="O trato foi enviado ao cartório social. Participantes serão notificados assim que o backend existir."
+            title={`Protocolo ${protocol}`}
+            titleAs="p"
+          >
+            <h1 className="case-card__title">{form.title}</h1>
 
-              <p className="notice">
-                Estimativa oficial: dano à amizade moderado. Valor jurídico:
-                nenhum. Valor no grupo: altíssimo.
-              </p>
+            <p className="notice">
+              Estimativa oficial: dano à amizade moderado. Valor jurídico:
+              nenhum. Valor no grupo: altíssimo.
+            </p>
 
-              <div className="button-row button-row--stack-mobile">
-                <Link className="button button--primary" to="/dashboard">
-                  Voltar ao painel
-                </Link>
-                <button
-                  className="button button--secondary"
-                  onClick={() => {
-                    setForm(initialForm)
-                    setProtocol(createProtocol())
-                    setSubmitted(false)
-                  }}
-                  type="button"
-                >
-                  Registrar outro
-                </button>
-              </div>
+            <div className="button-row button-row--stack-mobile">
+              <Link className="button button--primary" to="/dashboard">
+                Voltar ao painel
+              </Link>
+              <button
+                className="button button--secondary"
+                onClick={() => {
+                  setForm(initialForm)
+                  setProtocol(createProtocol())
+                  setSubmitted(false)
+                }}
+                type="button"
+              >
+                Registrar outro
+              </button>
             </div>
-          </section>
+          </Panel>
         </PageContainer>
       </AppLayout>
     )
@@ -118,17 +114,15 @@ export function CreateTratto() {
   return (
     <AppLayout backTo="/dashboard" title="Registrar novo trato">
       <PageContainer>
-        <form className="panel" onSubmit={handleSubmit} style={{ maxWidth: 760 }}>
-          <div className="panel__header">
-            <div>
-              <h1 className="section-title">Formulário TRT-A1</h1>
-              <p className="section-subtitle">
-                Preencha o suficiente para impedir versões alternativas da verdade.
-              </p>
-            </div>
-          </div>
-
-          <div className="panel__body form-grid">
+        <Panel
+          as="form"
+          bodyClassName="form-grid"
+          className="panel--form"
+          onSubmit={handleSubmit}
+          subtitle="Preencha o suficiente para impedir versões alternativas da verdade."
+          title="Formulário TRT-A1"
+          titleAs="h1"
+        >
             <Field htmlFor="tratto-category" label="Categoria">
               <select
                 className="select"
@@ -270,8 +264,7 @@ export function CreateTratto() {
             <button className="button button--primary button--full" disabled={!canSubmit} type="submit">
               Registrar trato
             </button>
-          </div>
-        </form>
+        </Panel>
       </PageContainer>
     </AppLayout>
   )

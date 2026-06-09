@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 
 import { AppLayout } from '@components/layout/AppLayout'
+import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
 import { ProgressBar } from '@components/common/ProgressBar'
 import { StatusBadge } from '@components/common/StatusBadge'
@@ -13,8 +14,7 @@ export function Profile() {
     <AppLayout title="Perfil e histórico">
       <PageContainer className="page-grid">
         <div className="stack stack--large">
-          <section className="panel">
-            <div className="panel__body stack stack--large">
+          <Panel bodyClassName="stack stack--large">
               <div className="case-card__header">
                 <div className="button-row" style={{ alignItems: 'center' }}>
                   <div className="mascot" aria-hidden="true">
@@ -32,8 +32,7 @@ export function Profile() {
               </div>
 
               <ProgressBar label="Reputação social" value={userProfile.reputation} />
-            </div>
-          </section>
+          </Panel>
 
           <section className="stats-grid">
             <StatCard label="Vitórias" value={userProfile.wins} />
@@ -42,27 +41,18 @@ export function Profile() {
             <StatCard label="Pendências" value={userProfile.pending} />
           </section>
 
-          <section className="panel">
-            <div className="panel__header">
-              <h2 className="section-title">Badges e reputação</h2>
-            </div>
-            <div className="panel__body badge-list">
+          <Panel bodyClassName="badge-list" title="Badges e reputação">
               {userProfile.badges.map((badge) => (
                 <article className="profile-badge" key={badge.id}>
                   <p className="profile-badge__name">{badge.name}</p>
                   <p className="section-subtitle">{badge.description}</p>
                 </article>
               ))}
-            </div>
-          </section>
+          </Panel>
         </div>
 
         <aside className="stack stack--large">
-          <section className="panel">
-            <div className="panel__header">
-              <h2 className="section-title">Histórico recente</h2>
-            </div>
-            <div className="panel__body stack">
+          <Panel bodyClassName="stack" title="Histórico recente">
               {recentTrattos.map((tratto) => (
                 <Link className="case-card" key={tratto.id} to={`/trattos/${tratto.id}`}>
                   <div className="case-card__header">
@@ -74,20 +64,14 @@ export function Profile() {
                   </div>
                 </Link>
               ))}
-            </div>
-          </section>
+          </Panel>
 
-          <section className="panel">
-            <div className="panel__header">
-              <h2 className="section-title">Perfil psicológico oficial</h2>
-            </div>
-            <div className="panel__body stack">
+          <Panel bodyClassName="stack" title="Perfil psicológico oficial">
               <InfoRow label="Melhor desculpa" value="Tecnicamente eu não prometi isso." />
               <InfoRow label="Qualidade das provas" value="Convincente com ressalvas." />
               <InfoRow label="Recursos abertos" value={String(userProfile.disputed)} />
               <InfoRow label="Risco social" value="Moderado, porém recorrente." />
-            </div>
-          </section>
+          </Panel>
         </aside>
       </PageContainer>
     </AppLayout>
