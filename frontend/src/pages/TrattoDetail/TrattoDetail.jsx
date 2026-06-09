@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom'
 import { ProgressBar } from '@components/common/ProgressBar'
 import { StatusBadge } from '@components/common/StatusBadge'
 import { AppLayout } from '@components/layout/AppLayout'
+import { PageContainer } from '@components/layout/PageContainer'
 import { decisionMethodLabels, getTrattoById } from '@/data/mockTrattos'
 
 const evidenceTypeLabels = {
@@ -22,9 +23,9 @@ export function TrattoDetail() {
   if (!tratto) {
     return (
       <AppLayout backTo="/dashboard" title="Caso não encontrado">
-        <main className="page-container">
+        <PageContainer>
           <div className="empty-state">Este trato não consta nos arquivos do cartório social.</div>
-        </main>
+        </PageContainer>
       </AppLayout>
     )
   }
@@ -55,7 +56,7 @@ export function TrattoDetail() {
 
   return (
     <AppLayout backTo="/dashboard" title={tratto.caseNumber}>
-      <main className="page-container page-grid">
+      <PageContainer className="page-grid">
         <div className="stack stack--large">
           <section className="panel">
             <div className="panel__body stack stack--large">
@@ -188,7 +189,7 @@ export function TrattoDetail() {
                 <p className="section-subtitle">
                   Ação mockada. Futuramente enviaremos isso para a rota de votos ou veredito.
                 </p>
-                <div className="button-row">
+                <div className="button-row button-row--stack-mobile">
                   <button className="button button--primary" type="button">
                     Chamar veredito
                   </button>
@@ -200,7 +201,7 @@ export function TrattoDetail() {
             </section>
           ) : null}
         </aside>
-      </main>
+      </PageContainer>
     </AppLayout>
   )
 }

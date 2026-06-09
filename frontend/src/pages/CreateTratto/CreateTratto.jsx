@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { AppLayout } from '@components/layout/AppLayout'
+import { PageContainer } from '@components/layout/PageContainer'
 import { decisionMethodLabels, trattoCategories } from '@/data/mockTrattos'
 
 const initialForm = {
@@ -72,7 +73,7 @@ export function CreateTratto() {
   if (submitted) {
     return (
       <AppLayout backTo="/dashboard" title="Trato registrado">
-        <main className="page-container">
+        <PageContainer>
           <section className="panel" style={{ maxWidth: 680 }}>
             <div className="panel__body stack stack--large">
               <div>
@@ -91,7 +92,7 @@ export function CreateTratto() {
                 nenhum. Valor no grupo: altíssimo.
               </p>
 
-              <div className="button-row">
+              <div className="button-row button-row--stack-mobile">
                 <Link className="button button--primary" to="/dashboard">
                   Voltar ao painel
                 </Link>
@@ -109,14 +110,14 @@ export function CreateTratto() {
               </div>
             </div>
           </section>
-        </main>
+        </PageContainer>
       </AppLayout>
     )
   }
 
   return (
     <AppLayout backTo="/dashboard" title="Registrar novo trato">
-      <main className="page-container">
+      <PageContainer>
         <form className="panel" onSubmit={handleSubmit} style={{ maxWidth: 760 }}>
           <div className="panel__header">
             <div>
@@ -165,7 +166,7 @@ export function CreateTratto() {
 
             <Field htmlFor="tratto-participant" hint="Obrigatório" label="Participantes">
               <div style={{ display: 'grid', gap: 10 }}>
-                <div style={{ display: 'grid', gap: 8, gridTemplateColumns: '1fr auto' }}>
+                <div className="participant-input-row">
                   <input
                     className="input"
                     id="tratto-participant"
@@ -188,7 +189,7 @@ export function CreateTratto() {
                   <div className="chip-row">
                     {form.participants.map((participant) => (
                       <span className="chip" key={participant}>
-                        {participant}
+                        <span className="chip__text">{participant}</span>
                         <button onClick={() => removeParticipant(participant)} type="button">
                           remover
                         </button>
@@ -271,7 +272,7 @@ export function CreateTratto() {
             </button>
           </div>
         </form>
-      </main>
+      </PageContainer>
     </AppLayout>
   )
 }
