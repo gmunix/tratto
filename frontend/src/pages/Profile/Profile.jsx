@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 
 import { AppLayout } from '@components/layout/AppLayout'
+import { PageContainer } from '@components/layout/PageContainer'
 import { ProgressBar } from '@components/common/ProgressBar'
 import { StatusBadge } from '@components/common/StatusBadge'
 import { mockTrattos, userProfile } from '@/data/mockTrattos'
@@ -10,7 +11,7 @@ export function Profile() {
 
   return (
     <AppLayout title="Perfil e histórico">
-      <main className="page-container page-grid">
+      <PageContainer className="page-grid">
         <div className="stack stack--large">
           <section className="panel">
             <div className="panel__body stack stack--large">
@@ -88,7 +89,7 @@ export function Profile() {
             </div>
           </section>
         </aside>
-      </main>
+      </PageContainer>
     </AppLayout>
   )
 }

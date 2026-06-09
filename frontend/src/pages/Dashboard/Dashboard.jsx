@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 
 import { AppLayout } from '@components/layout/AppLayout'
+import { PageContainer } from '@components/layout/PageContainer'
 import { TrattoCard } from '@components/features/trattos/TrattoCard'
 import { mockTrattos, pendingInvites } from '@/data/mockTrattos'
 
@@ -21,7 +22,7 @@ export function Dashboard() {
       }
       title="Painel de controle"
     >
-      <div className="page-container stack stack--large">
+      <PageContainer className="stack stack--large">
         <section className="stats-grid">
           <StatCard label="Ativos" value={activeTrattos.length} />
           <StatCard label="Pendentes" value={pendingTrattos.length + pendingInvites.length} />
@@ -78,7 +79,7 @@ export function Dashboard() {
                     <p className="case-card__description">Consequência: {invite.consequence}</p>
                     <div className="invite-card__footer">
                       <span className="muted-label">Prazo {invite.deadline}</span>
-                      <div className="button-row">
+                      <div className="button-row button-row--stack-mobile">
                         <button className="button button--primary" type="button">
                           Aceitar
                         </button>
@@ -101,7 +102,7 @@ export function Dashboard() {
             </Panel>
           </aside>
         </section>
-      </div>
+      </PageContainer>
     </AppLayout>
   )
 }
