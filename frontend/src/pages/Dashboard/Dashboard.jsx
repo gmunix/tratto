@@ -1,5 +1,6 @@
-import { Link } from 'react-router-dom'
-
+import { Button } from '@components/common/Button'
+import { EmptyState } from '@components/common/EmptyState'
+import { StatCard } from '@components/common/StatCard'
 import { AppLayout } from '@components/layout/AppLayout'
 import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
@@ -17,9 +18,9 @@ export function Dashboard() {
   return (
     <AppLayout
       actions={
-        <Link className="button button--primary" to="/novo">
+        <Button to="/novo">
           Novo trato
-        </Link>
+        </Button>
       }
       title="Painel de controle"
     >
@@ -44,7 +45,7 @@ export function Dashboard() {
                   ))}
                 </div>
               ) : (
-                <EmptyState text="Nenhum trato ativo no momento." />
+                <EmptyState>Nenhum trato ativo no momento.</EmptyState>
               )}
             </Panel>
 
@@ -81,12 +82,12 @@ export function Dashboard() {
                     <div className="invite-card__footer">
                       <span className="muted-label">Prazo {invite.deadline}</span>
                       <div className="button-row button-row--stack-mobile">
-                        <button className="button button--primary" type="button">
+                        <Button type="button">
                           Aceitar
-                        </button>
-                        <button className="button button--ghost" type="button">
+                        </Button>
+                        <Button type="button" variant="ghost">
                           Recusar
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   </article>
@@ -106,17 +107,4 @@ export function Dashboard() {
       </PageContainer>
     </AppLayout>
   )
-}
-
-function StatCard({ label, value }) {
-  return (
-    <div className="stat-card">
-      <span className="muted-label">{label}</span>
-      <div className="stat-card__value">{value}</div>
-    </div>
-  )
-}
-
-function EmptyState({ text }) {
-  return <div className="empty-state">{text}</div>
 }

@@ -1,5 +1,7 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 
+import { Button } from '@components/common/Button'
+
 const navItems = [
   { label: 'Painel', path: '/dashboard', Icon: LayoutGridIcon },
   { label: 'Novo', path: '/novo', Icon: PlusIcon },
@@ -16,13 +18,13 @@ export function AppLayout({ title, eyebrow = 'TRATTO', backTo, actions, children
           <div className="stack" style={{ gap: 4 }}>
             <div className="button-row" style={{ alignItems: 'center' }}>
               {backTo ? (
-                <button
-                  className="button button--ghost"
+                <Button
                   onClick={() => navigate(backTo)}
                   type="button"
+                  variant="ghost"
                 >
                   Voltar
-                </button>
+                </Button>
               ) : null}
               <span className="muted-label">{eyebrow}</span>
             </div>

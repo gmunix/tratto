@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
 
+import { Button } from '@components/common/Button'
+import { StatCard } from '@components/common/StatCard'
 import { StatusBadge } from '@components/common/StatusBadge'
 import { mockTrattos } from '@/data/mockTrattos'
 
@@ -15,9 +17,9 @@ export function Home() {
           </Link>
           <div className="button-row" style={{ alignItems: 'center' }}>
             <span className="muted-label">Reg. TRT-0001</span>
-            <Link className="button button--primary" to="/login">
+            <Button to="/login">
               Entrar
-            </Link>
+            </Button>
           </div>
         </div>
       </header>
@@ -40,12 +42,12 @@ export function Home() {
             </div>
 
             <div className="hero__actions">
-              <Link className="button button--primary" to="/login">
+              <Button to="/login">
                 Abrir painel
-              </Link>
-              <Link className="button button--secondary" to="/login">
+              </Button>
+              <Button to="/login" variant="secondary">
                 Registrar trato
-              </Link>
+              </Button>
             </div>
 
             <p className="notice">
@@ -67,22 +69,10 @@ export function Home() {
           </div>
 
           <div className="stats-grid">
-            <div className="stat-card">
-              <span className="muted-label">Tratos registrados</span>
-              <div className="stat-card__value">2.847</div>
-            </div>
-            <div className="stat-card">
-              <span className="muted-label">Provas anexadas</span>
-              <div className="stat-card__value">9.104</div>
-            </div>
-            <div className="stat-card">
-              <span className="muted-label">Vereditos emitidos</span>
-              <div className="stat-card__value">1.203</div>
-            </div>
-            <div className="stat-card">
-              <span className="muted-label">Amizades testadas</span>
-              <div className="stat-card__value">892</div>
-            </div>
+            <StatCard label="Tratos registrados" value="2.847" />
+            <StatCard label="Provas anexadas" value="9.104" />
+            <StatCard label="Vereditos emitidos" value="1.203" />
+            <StatCard label="Amizades testadas" value="892" />
           </div>
 
           <div className="card-grid">
