@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 
 import { AppLayout } from '@components/layout/AppLayout'
+import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
 import { TrattoCard } from '@components/features/trattos/TrattoCard'
 import { mockTrattos, pendingInvites } from '@/data/mockTrattos'
@@ -113,20 +114,6 @@ function StatCard({ label, value }) {
       <span className="muted-label">{label}</span>
       <div className="stat-card__value">{value}</div>
     </div>
-  )
-}
-
-function Panel({ title, subtitle, children }) {
-  return (
-    <section className="panel">
-      <div className="panel__header">
-        <div>
-          <h2 className="section-title">{title}</h2>
-          {subtitle ? <p className="section-subtitle">{subtitle}</p> : null}
-        </div>
-      </div>
-      <div className="panel__body">{children}</div>
-    </section>
   )
 }
 

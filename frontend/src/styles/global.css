@@ -213,6 +213,14 @@ h3 {
   border-radius: 0;
 }
 
+.panel--form {
+  max-width: 760px;
+}
+
+.panel--narrow {
+  max-width: 680px;
+}
+
 .panel__header {
   display: flex;
   align-items: center;
