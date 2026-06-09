@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Button } from '@components/common/Button'
 
 export function NotFound() {
   return (
@@ -8,9 +8,9 @@ export function NotFound() {
         <p className="section-subtitle">
           Este documento não consta no arquivo oficial do Tratto.
         </p>
-        <Link className="button button--primary" to="/login">
+        <Button to="/login">
           Ir para entrada
-        </Link>
+        </Button>
       </section>
     </main>
   )

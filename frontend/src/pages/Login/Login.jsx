@@ -1,5 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 
+import { Button } from '@components/common/Button'
+import { Field } from '@components/common/Field'
 import { Panel } from '@components/layout/Panel'
 
 export function Login() {
@@ -31,10 +33,7 @@ export function Login() {
           title="Entrar no cartório"
           titleAs="h1"
         >
-            <div className="field">
-              <label className="field__label" htmlFor="login-email">
-                E-mail ou usuário
-              </label>
+            <Field htmlFor="login-email" label="E-mail ou usuário">
               <input
                 autoComplete="username"
                 className="input"
@@ -42,12 +41,9 @@ export function Login() {
                 placeholder="@marcosf"
                 type="text"
               />
-            </div>
+            </Field>
 
-            <div className="field">
-              <label className="field__label" htmlFor="login-password">
-                Senha
-              </label>
+            <Field htmlFor="login-password" label="Senha">
               <input
                 autoComplete="current-password"
                 className="input"
@@ -55,19 +51,19 @@ export function Login() {
                 placeholder="Qualquer senha serve por enquanto"
                 type="password"
               />
-            </div>
+            </Field>
 
             <p className="notice">
               Autenticação real ainda não faz parte deste escopo. Este botão só
               simula a entrada para validar navegação e hierarquia visual.
             </p>
 
-            <button className="button button--primary button--full" type="submit">
+            <Button fullWidth type="submit">
               Entrar
-            </button>
-            <Link className="button button--ghost button--full" to="/">
+            </Button>
+            <Button fullWidth to="/" variant="ghost">
               Voltar para a home
-            </Link>
+            </Button>
         </Panel>
       </main>
     </div>

@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 
+import { Button } from '@components/common/Button'
+import { EmptyState } from '@components/common/EmptyState'
+import { InfoRow } from '@components/common/InfoRow'
 import { ProgressBar } from '@components/common/ProgressBar'
 import { StatusBadge } from '@components/common/StatusBadge'
 import { AppLayout } from '@components/layout/AppLayout'
@@ -25,7 +28,7 @@ export function TrattoDetail() {
     return (
       <AppLayout backTo="/dashboard" title="Caso não encontrado">
         <PageContainer>
-          <div className="empty-state">Este trato não consta nos arquivos do cartório social.</div>
+          <EmptyState>Este trato não consta nos arquivos do cartório social.</EmptyState>
         </PageContainer>
       </AppLayout>
     )
@@ -101,7 +104,7 @@ export function TrattoDetail() {
                   ))}
                 </div>
               ) : (
-                <div className="empty-state">Nenhuma evidência enviada ainda.</div>
+                <EmptyState>Nenhuma evidência enviada ainda.</EmptyState>
               )}
           </Panel>
 
@@ -109,14 +112,14 @@ export function TrattoDetail() {
             <Panel as="form" bodyClassName="form-grid" onSubmit={submitEvidence} title="Enviar evidência">
                 <div className="chip-row">
                   {Object.entries(evidenceTypeLabels).map(([type, label]) => (
-                    <button
-                      className={`button ${evidenceType === type ? 'button--primary' : 'button--secondary'}`}
+                    <Button
                       key={type}
                       onClick={() => setEvidenceType(type)}
                       type="button"
+                      variant={evidenceType === type ? 'primary' : 'secondary'}
                     >
                       {label}
-                    </button>
+                    </Button>
                   ))}
                 </div>
                 <label className="field__label" htmlFor="evidence-content">
@@ -129,13 +132,9 @@ export function TrattoDetail() {
                   placeholder="Descreva a prova, cole um link ou registre uma confissão cuidadosamente redigida."
                   value={evidenceText}
                 />
-                <button
-                  className="button button--primary"
-                  disabled={!evidenceText.trim()}
-                  type="submit"
-                >
+                <Button disabled={!evidenceText.trim()} type="submit">
                   Enviar ao conselho
-                </button>
+                </Button>
             </Panel>
           ) : null}
         </div>
@@ -165,26 +164,17 @@ export function TrattoDetail() {
               title="Solicitar julgamento"
             >
                 <div className="button-row button-row--stack-mobile">
-                  <button className="button button--primary" type="button">
+                  <Button type="button">
                     Chamar veredito
-                  </button>
-                  <button className="button button--ghost" type="button">
+                  </Button>
+                  <Button type="button" variant="ghost">
                     Estender prazo
-                  </button>
+                  </Button>
                 </div>
             </Panel>
           ) : null}
         </aside>
       </PageContainer>
     </AppLayout>
-  )
-}
-
-function InfoRow({ label, value }) {
-  return (
-    <div className="profile-row">
-      <span className="muted-label">{label}</span>
-      <span className="profile-row__value">{value}</span>
-    </div>
   )
 }

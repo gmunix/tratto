@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 
+import { Button } from '@components/common/Button'
+import { Field } from '@components/common/Field'
 import { AppLayout } from '@components/layout/AppLayout'
 import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
@@ -90,20 +91,20 @@ export function CreateTratto() {
             </p>
 
             <div className="button-row button-row--stack-mobile">
-              <Link className="button button--primary" to="/dashboard">
+              <Button to="/dashboard">
                 Voltar ao painel
-              </Link>
-              <button
-                className="button button--secondary"
+              </Button>
+              <Button
                 onClick={() => {
                   setForm(initialForm)
                   setProtocol(createProtocol())
                   setSubmitted(false)
                 }}
                 type="button"
+                variant="secondary"
               >
                 Registrar outro
-              </button>
+              </Button>
             </div>
           </Panel>
         </PageContainer>
@@ -174,9 +175,9 @@ export function CreateTratto() {
                     placeholder="Nome ou usuário"
                     value={form.participantName}
                   />
-                  <button className="button button--secondary" onClick={addParticipant} type="button">
+                  <Button onClick={addParticipant} type="button" variant="secondary">
                     Adicionar
-                  </button>
+                  </Button>
                 </div>
 
                 {form.participants.length ? (
@@ -261,28 +262,12 @@ export function CreateTratto() {
               inconveniência.
             </p>
 
-            <button className="button button--primary button--full" disabled={!canSubmit} type="submit">
+            <Button disabled={!canSubmit} fullWidth type="submit">
               Registrar trato
-            </button>
+            </Button>
         </Panel>
       </PageContainer>
     </AppLayout>
-  )
-}
-
-function Field({ label, hint, htmlFor, children }) {
-  return (
-    <div className="field">
-      {htmlFor ? (
-        <label className="field__label" htmlFor={htmlFor}>
-          {label}
-        </label>
-      ) : (
-        <span className="field__label">{label}</span>
-      )}
-      {hint ? <span className="field__hint">{hint}</span> : null}
-      {children}
-    </div>
   )
 }
 

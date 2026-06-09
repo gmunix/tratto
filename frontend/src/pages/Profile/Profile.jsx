@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
 
+import { InfoRow } from '@components/common/InfoRow'
+import { StatCard } from '@components/common/StatCard'
 import { AppLayout } from '@components/layout/AppLayout'
 import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
@@ -75,23 +77,5 @@ export function Profile() {
         </aside>
       </PageContainer>
     </AppLayout>
-  )
-}
-
-function StatCard({ label, value }) {
-  return (
-    <div className="stat-card">
-      <span className="muted-label">{label}</span>
-      <div className="stat-card__value">{value}</div>
-    </div>
-  )
-}
-
-function InfoRow({ label, value }) {
-  return (
-    <div className="profile-row">
-      <span className="muted-label">{label}</span>
-      <span className="profile-row__value">{value}</span>
-    </div>
   )
 }
