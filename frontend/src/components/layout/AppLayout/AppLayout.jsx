@@ -15,10 +15,11 @@ export function AppLayout({ title, eyebrow = 'TRATTO', backTo, actions, children
     <div className="app-shell">
       <header className="app-header">
         <div className="app-header__inner">
-          <div className="stack" style={{ gap: 4 }}>
-            <div className="button-row" style={{ alignItems: 'center' }}>
+          <div className="app-header__main">
+            <div className="app-header__meta">
               {backTo ? (
                 <Button
+                  className="app-header__back"
                   onClick={() => navigate(backTo)}
                   type="button"
                   variant="ghost"
@@ -28,11 +29,11 @@ export function AppLayout({ title, eyebrow = 'TRATTO', backTo, actions, children
               ) : null}
               <span className="muted-label">{eyebrow}</span>
             </div>
-            {title ? <h1 className="section-title">{title}</h1> : null}
+            {title ? <h1 className="section-title app-header__title">{title}</h1> : null}
           </div>
 
-          <div className="button-row" style={{ alignItems: 'center' }}>
-            {actions}
+          <div className="app-header__side">
+            {actions ? <div className="app-header__actions">{actions}</div> : null}
             <Link className="brand-mark" to="/">
               TRATTO
             </Link>

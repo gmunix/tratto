@@ -141,6 +141,24 @@ h3 {
   gap: 18px;
 }
 
+.app-header__main {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.app-header__meta,
+.app-header__side,
+.app-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-header__title {
+  min-width: 0;
+}
+
 .brand-mark {
   color: var(--color-brand);
   font-weight: 900;
@@ -774,7 +792,39 @@ h3 {
     padding: 10px 0;
   }
 
-  .app-header__inner > .button-row,
+  .app-header__inner {
+    flex-wrap: nowrap;
+  }
+
+  .app-header__main {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    gap: 10px;
+  }
+
+  .app-header__meta {
+    display: contents;
+  }
+
+  .app-header__back {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 0 12px;
+  }
+
+  .app-header__meta .muted-label,
+  .app-header__side {
+    display: none;
+  }
+
+  .app-header__title {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .landing-header__inner > .button-row {
     width: 100%;
     justify-content: space-between;
