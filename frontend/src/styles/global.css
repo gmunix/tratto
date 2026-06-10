@@ -114,7 +114,6 @@ h3 {
   padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
 }
 
-.app-header,
 .landing-header {
   position: sticky;
   top: 0;
@@ -125,38 +124,18 @@ h3 {
   backdrop-filter: blur(14px);
 }
 
-.app-header__inner,
 .landing-header__inner,
 .page-container {
   width: min(var(--page-width), calc(100% - var(--page-gutter)));
   margin: 0 auto;
 }
 
-.app-header__inner,
 .landing-header__inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   min-height: var(--header-height);
   gap: 18px;
-}
-
-.app-header__main {
-  display: grid;
-  min-width: 0;
-  gap: 4px;
-}
-
-.app-header__meta,
-.app-header__side,
-.app-header__actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.app-header__title {
-  min-width: 0;
 }
 
 .brand-mark {
@@ -779,55 +758,14 @@ h3 {
 }
 
 @media (max-width: 560px) {
-  .app-header__inner,
   .landing-header__inner,
   .page-container {
     width: min(100% - var(--page-gutter-sm), var(--page-width));
   }
 
-  .app-header__inner,
   .landing-header__inner {
-    flex-wrap: wrap;
     min-height: 58px;
     padding: 10px 0;
-  }
-
-  .app-header__inner {
-    flex-wrap: nowrap;
-  }
-
-  .app-header__main {
-    display: flex;
-    align-items: center;
-    flex: 1 1 auto;
-    gap: 10px;
-  }
-
-  .app-header__meta {
-    display: contents;
-  }
-
-  .app-header__back {
-    flex: 0 0 auto;
-    min-height: 36px;
-    padding: 0 12px;
-  }
-
-  .app-header__meta .muted-label,
-  .app-header__side {
-    display: none;
-  }
-
-  .app-header__title {
-    flex: 1 1 auto;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .landing-header__inner > .button-row {
-    width: 100%;
-    justify-content: space-between;
   }
 
   .hero {

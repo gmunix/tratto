@@ -1,6 +1,4 @@
-import { Link, NavLink, useNavigate } from 'react-router-dom'
-
-import { Button } from '@components/common/Button'
+import { NavLink } from 'react-router-dom'
 
 const navItems = [
   { label: 'Painel', path: '/dashboard', Icon: LayoutGridIcon },
@@ -8,39 +6,9 @@ const navItems = [
   { label: 'Perfil', path: '/perfil', Icon: UserIcon },
 ]
 
-export function AppLayout({ title, eyebrow = 'TRATTO', backTo, actions, children }) {
-  const navigate = useNavigate()
-
+export function AppLayout({ children }) {
   return (
     <div className="app-shell">
-      <header className="app-header">
-        <div className="app-header__inner">
-          <div className="app-header__main">
-            <div className="app-header__meta">
-              {backTo ? (
-                <Button
-                  className="app-header__back"
-                  onClick={() => navigate(backTo)}
-                  type="button"
-                  variant="ghost"
-                >
-                  Voltar
-                </Button>
-              ) : null}
-              <span className="muted-label">{eyebrow}</span>
-            </div>
-            {title ? <h1 className="section-title app-header__title">{title}</h1> : null}
-          </div>
-
-          <div className="app-header__side">
-            {actions ? <div className="app-header__actions">{actions}</div> : null}
-            <Link className="brand-mark" to="/">
-              TRATTO
-            </Link>
-          </div>
-        </div>
-      </header>
-
       <main>{children}</main>
 
       <nav className="bottom-nav" aria-label="Navegação principal">

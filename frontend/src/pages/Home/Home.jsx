@@ -16,7 +16,6 @@ export function Home() {
             TRATTO
           </Link>
           <div className="button-row" style={{ alignItems: 'center' }}>
-            <span className="muted-label">Reg. TRT-0001</span>
             <Button to="/login">
               Entrar
             </Button>
