@@ -24,3 +24,15 @@ export function toCommunityMembershipDto(membership) {
     status: membership.status,
   }
 }
+
+export function toFullCommunityMembershipDto(membership) {
+  if (!membership) {
+    return null
+  }
+
+  return {
+    id: membership.id,
+    role: membership.role,
+    status: membership.status,
+  }
+}
