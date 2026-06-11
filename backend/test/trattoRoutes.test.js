@@ -34,9 +34,15 @@ test('GET /api/trattos returns visible Trattos and hides unrelated private recor
   const invited = await registerUser({ email: 'visible-invited@example.com', slug: 'visible-invited', displayName: 'Visible Invited' })
   const outsider = await registerUser({ email: 'visible-outsider@example.com', slug: 'visible-outsider', displayName: 'Visible Outsider' })
   const member = await registerUser({ email: 'visible-member@example.com', slug: 'visible-member', displayName: 'Visible Member' })
+  const pendingMember = await registerUser({ email: 'visible-pending@example.com', slug: 'visible-pending', displayName: 'Visible Pending' })
+  const deniedMember = await registerUser({ email: 'visible-denied@example.com', slug: 'visible-denied', displayName: 'Visible Denied' })
+  const removedMember = await registerUser({ email: 'visible-removed@example.com', slug: 'visible-removed', displayName: 'Visible Removed' })
 
   await insertCommunity({ id: 'com-visible', slug: 'visible-community', creatorId: owner.user.id })
   await insertMembership({ id: 'mem-visible-member', communityId: 'com-visible', userId: member.user.id })
+  await insertMembership({ id: 'mem-visible-pending', communityId: 'com-visible', userId: pendingMember.user.id, status: 'pending' })
+  await insertMembership({ id: 'mem-visible-denied', communityId: 'com-visible', userId: deniedMember.user.id, status: 'denied' })
+  await insertMembership({ id: 'mem-visible-removed', communityId: 'com-visible', userId: removedMember.user.id, status: 'removed' })
   await insertTratto({ id: 'trt-created', creatorId: owner.user.id, title: 'Created visible' })
   await insertParticipant({ id: 'trt-created-owner', trattoId: 'trt-created', user: owner.user, role: 'creator' })
   await insertTratto({ id: 'trt-invited', creatorId: outsider.user.id, title: 'Invited visible' })
@@ -64,10 +70,25 @@ test('GET /api/trattos returns visible Trattos and hides unrelated private recor
     .get('/api/trattos')
     .set('Authorization', `Bearer ${member.token}`)
     .expect(200)
+  const pendingResponse = await request(app)
+    .get('/api/trattos')
+    .set('Authorization', `Bearer ${pendingMember.token}`)
+    .expect(200)
+  const deniedResponse = await request(app)
+    .get('/api/trattos')
+    .set('Authorization', `Bearer ${deniedMember.token}`)
+    .expect(200)
+  const removedResponse = await request(app)
+    .get('/api/trattos')
+    .set('Authorization', `Bearer ${removedMember.token}`)
+    .expect(200)
 
   assert.deepEqual(ids(ownerResponse), ['trt-community-visible', 'trt-created'])
   assert.deepEqual(ids(invitedResponse), ['trt-invited'])
   assert.deepEqual(ids(memberResponse), ['trt-community-visible'])
+  assert.deepEqual(ids(pendingResponse), [])
+  assert.deepEqual(ids(deniedResponse), [])
+  assert.deepEqual(ids(removedResponse), [])
   assert.equal(ownerResponse.body.stats.pending, 2)
 })
 
@@ -95,6 +116,29 @@ test('GET /api/trattos/:id returns rules and permissions', async () => {
     canResolveVerdict: false,
     canComplete: false,
   })
+})
+
+test('GET /api/trattos/:id allows accepted judges to request judgment', async () => {
+  const creator = await registerUser({ email: 'judge-creator@example.com', slug: 'judge-creator', displayName: 'Judge Creator' })
+  const judge = await registerUser({ email: 'judge-user@example.com', slug: 'judge-user', displayName: 'Judge User' })
+  await insertTratto({
+    id: 'trt-judge-permissions',
+    creatorId: creator.user.id,
+    title: 'Judge Permission Tratto',
+    status: 'active',
+    decisionMethod: 'judge',
+  })
+  await insertParticipant({ id: 'trt-judge-creator', trattoId: 'trt-judge-permissions', user: creator.user, role: 'creator' })
+  await insertParticipant({ id: 'trt-judge-user', trattoId: 'trt-judge-permissions', user: judge.user, role: 'judge' })
+
+  const response = await request(app)
+    .get('/api/trattos/trt-judge-permissions')
+    .set('Authorization', `Bearer ${judge.token}`)
+    .expect(200)
+
+  assert.equal(response.body.tratto.permissions.canRequestJudgment, true)
+  assert.equal(response.body.tratto.permissions.canResolveVerdict, false)
+  assert.equal(response.body.tratto.permissions.canVote, false)
 })
 
 test('POST /api/trattos creates standalone Tratto with creator and invited participants', async () => {

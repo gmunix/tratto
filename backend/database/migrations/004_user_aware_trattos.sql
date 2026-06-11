@@ -11,19 +11,28 @@ ALTER TABLE tratto_participants ADD COLUMN invited_at TEXT;
 ALTER TABLE evidences ADD COLUMN author_user_id TEXT REFERENCES users (id) ON DELETE SET NULL;
 ALTER TABLE comments ADD COLUMN author_user_id TEXT REFERENCES users (id) ON DELETE SET NULL;
 
+WITH unique_display_names AS (
+  SELECT LOWER(display_name) AS display_name_key, MIN(id) AS user_id
+  FROM users
+  GROUP BY LOWER(display_name)
+  HAVING COUNT(*) = 1
+)
 UPDATE tratto_participants
 SET user_id = (
-  SELECT users.id
-  FROM users
-  WHERE LOWER(users.display_name) = LOWER(tratto_participants.display_name)
-  LIMIT 1
+  SELECT unique_display_names.user_id
+  FROM unique_display_names
+  WHERE unique_display_names.display_name_key = LOWER(tratto_participants.display_name)
 )
-WHERE user_id IS NULL;
+WHERE user_id IS NULL
+  AND EXISTS (
+    SELECT 1
+    FROM unique_display_names
+    WHERE unique_display_names.display_name_key = LOWER(tratto_participants.display_name)
+  );
 
 UPDATE tratto_participants
 SET invited_at = created_at
-WHERE invited_at IS NULL
-  AND invite_status = 'pending';
+WHERE invited_at IS NULL;
 
 UPDATE trattos
 SET creator_id = (
@@ -31,9 +40,25 @@ SET creator_id = (
   FROM tratto_participants participant
   WHERE participant.tratto_id = trattos.id
     AND participant.role = 'creator'
-  LIMIT 1
+  GROUP BY participant.tratto_id
+  HAVING COUNT(*) = 1
 )
 WHERE creator_id IS NULL;
+
+UPDATE tratto_participants
+SET invited_by_user_id = (
+  SELECT trattos.creator_id
+  FROM trattos
+  WHERE trattos.id = tratto_participants.tratto_id
+)
+WHERE invited_by_user_id IS NULL
+  AND role != 'creator'
+  AND EXISTS (
+    SELECT 1
+    FROM trattos
+    WHERE trattos.id = tratto_participants.tratto_id
+      AND trattos.creator_id IS NOT NULL
+  );
 
 UPDATE evidences
 SET author_user_id = (
@@ -41,7 +66,6 @@ SET author_user_id = (
   FROM tratto_participants participant
   WHERE participant.tratto_id = evidences.tratto_id
     AND participant.id = evidences.author_participant_id
-  LIMIT 1
 )
 WHERE author_user_id IS NULL;
 
@@ -51,7 +75,6 @@ SET author_user_id = (
   FROM tratto_participants participant
   WHERE participant.tratto_id = comments.tratto_id
     AND participant.id = comments.author_participant_id
-  LIMIT 1
 )
 WHERE author_user_id IS NULL;
 

@@ -129,11 +129,12 @@ function buildPermissions(tratto, currentUserId) {
   const isAcceptedParticipant = currentParticipant?.inviteStatus === 'accepted'
   const isJudge = currentParticipant?.role === 'judge' && isAcceptedParticipant
   const participantCanAct = isAcceptedParticipant && ['creator', 'participant'].includes(currentParticipant.role)
+  const canRequestJudgment = (participantCanAct || isJudge) && tratto.status === 'active'
 
   return {
     canEdit: isCreator && tratto.status === 'pending',
     canAddEvidence: isAcceptedParticipant && ['active', 'review'].includes(tratto.status),
-    canRequestJudgment: participantCanAct && tratto.status === 'active',
+    canRequestJudgment,
     canVote: participantCanAct && tratto.decisionMethod === 'vote' && ['active', 'review'].includes(tratto.status),
     canResolveVerdict: isJudge && tratto.decisionMethod === 'judge' && tratto.status === 'review',
     canComplete: isCreator && tratto.status === 'compliance',

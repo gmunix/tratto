@@ -220,12 +220,13 @@ SET user_id = CASE id
     WHEN 'trt-0005-clara' THEN 'usr-clara'
     WHEN 'trt-0005-diego' THEN 'usr-diego'
   END,
-  invited_by_user_id = CASE tratto_id
-    WHEN 'trt-0001' THEN 'usr-marcos'
-    WHEN 'trt-0002' THEN 'usr-carlos'
-    WHEN 'trt-0003' THEN 'usr-rafa'
-    WHEN 'trt-0004' THEN 'usr-lucas'
-    WHEN 'trt-0005' THEN 'usr-clara'
+  invited_by_user_id = CASE
+    WHEN role = 'creator' THEN NULL
+    WHEN tratto_id = 'trt-0001' THEN 'usr-marcos'
+    WHEN tratto_id = 'trt-0002' THEN 'usr-carlos'
+    WHEN tratto_id = 'trt-0003' THEN 'usr-rafa'
+    WHEN tratto_id = 'trt-0004' THEN 'usr-lucas'
+    WHEN tratto_id = 'trt-0005' THEN 'usr-clara'
   END,
   invited_at = created_at
 WHERE id IN (
