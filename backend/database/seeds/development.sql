@@ -6,6 +6,31 @@ DELETE FROM evidences;
 DELETE FROM tratto_verdicts;
 DELETE FROM tratto_participants;
 DELETE FROM trattos;
+DELETE FROM auth_tokens;
+DELETE FROM users;
+
+INSERT INTO users (
+  id,
+  email,
+  password_hash,
+  display_name,
+  slug,
+  avatar_url,
+  theme,
+  created_at,
+  updated_at
+) VALUES
+  ('usr-marcos', 'marcos@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d6d6172636f73:0f81bbab29249d1309373935a3a86486328d41f3b3c3927f66ec0544b4be362bdcb54b31b94934b3a8e1ccb7c649f25eb794ff4ce94ccf113ef48b596c991c9b', 'Marcos Ferreira', 'marcosf', NULL, 'grime', '2026-05-01T12:00:00.000Z', '2026-05-01T12:00:00.000Z'),
+  ('usr-julia', 'julia@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d6a756c6961:b871d0592b23f71da643db0d5f5b04e8baf67e8d587395e3d3ffbf361e91cd0564604b9551a10b3f09095434a776236b3e2087b45b5a369ca30730e447265afa', 'Julia Souza', 'julias', NULL, 'grime', '2026-05-01T12:05:00.000Z', '2026-05-01T12:05:00.000Z'),
+  ('usr-carlos', 'carlos@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d6361726c6f73:d3c5a03c6dbdccfc7fd77cb1948348a4a45b2074862088946b48d4d53a9b5223290da1bd2b6c351b8cd873bb2be549b872a3f51b13685c244ffdc5d8276c2b3b', 'Carlos Reis', 'carlosr', NULL, 'grime', '2026-05-15T12:00:00.000Z', '2026-05-15T12:00:00.000Z'),
+  ('usr-ana', 'ana@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d616e61:b377797e7deab68e8a60d7ac87a563b4f67287e1f55f5a1d7a240ab004b005d6626231b8327a170994dee13b784c605f898d1dfdfcda68e79803cecd1bb6e36d', 'Ana Paula', 'anapaula', NULL, 'grime', '2026-05-15T12:00:00.000Z', '2026-05-15T12:00:00.000Z'),
+  ('usr-pedro', 'pedro@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d706564726f:0b8098008b2eeb7e088d38745a557341b7e37eb036ca4f71badbd79d48969ed7c1a1409a5dc4c120f04abda5d3472f2e4a8c3050188c2fae11319d6c14c552b5', 'Pedro Martins', 'pedrom', NULL, 'grime', '2026-05-15T12:00:00.000Z', '2026-05-15T12:00:00.000Z'),
+  ('usr-rafa', 'rafa@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d72616661:085c3cdbe52aeb1c107dc40b9d2fdf059466208412cd947fe79d8b9c6914da2a2e5a092b02839a94927c460a888ad283d124d2a730957e29b8afad83d674995d', 'Rafa Brito', 'rafab', NULL, 'grime', '2026-04-01T12:00:00.000Z', '2026-04-01T12:00:00.000Z'),
+  ('usr-beto', 'beto@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d6265746f:fddf7f98850f51bf18551d4a1952cd8e0f27a4141315540a977fabbfc6f1410960fa923dc96ac4faab77df96c1db85f87f7f94e3bc1fbb9221e989a1a3cdbfa4', 'Beto Alves', 'betoalves', NULL, 'grime', '2026-04-01T12:10:00.000Z', '2026-04-01T12:10:00.000Z'),
+  ('usr-lucas', 'lucas@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d6c75636173:a913628dd1eb81807581f6f747e2684311f52fa0af2077f7c8219d8d7ba82565b54408d8d027e4dd75bb5882bc84eaf144404f2ad177bc6b4626f21e2c5b2720', 'Lucas Dias', 'lucasd', NULL, 'grime', '2026-05-05T12:00:00.000Z', '2026-05-05T12:00:00.000Z'),
+  ('usr-lara', 'lara@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d6c617261:ec61ac1562114efd0ed6ef3d14ebbff586ed034662ca787b72dcc46d1ed84b3e3d6eb984d765ec576884e24e4fda9fc807238d78e309e908fde6928568ba2821', 'Lara Costa', 'larac', NULL, 'grime', '2026-05-05T12:15:00.000Z', '2026-05-05T12:15:00.000Z'),
+  ('usr-clara', 'clara@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d636c617261:35fe99521833723ea1a4e96e7845d2fdfcff36254f9a649e8b29ddb29faaa2dfd4aca2beb145fc2ad74cef958fd422255cfa03b5e5a4e12638c6f8a3bda59e94', 'Clara Mendes', 'claram', NULL, 'grime', '2026-03-31T12:00:00.000Z', '2026-03-31T12:00:00.000Z'),
+  ('usr-diego', 'diego@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d646965676f:25675a9abf243a1502073cd47a9928203adb7eacb3daab1b4ed2547650b114459ebd5839506365ad2272d284d770bb50b38d2de9467a73a9fc104cafe97dbd64', 'Diego Freitas', 'diegof', NULL, 'grime', '2026-03-31T12:08:00.000Z', '2026-03-31T12:08:00.000Z');
 
 INSERT INTO trattos (
   id,

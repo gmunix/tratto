@@ -38,3 +38,9 @@ export function openTestDatabase(databasePath) {
   db.pragma('foreign_keys = ON')
   return db
 }
+
+export function openWritableTestDatabase(databasePath) {
+  const db = new Database(databasePath)
+  db.pragma('foreign_keys = ON')
+  return db
+}
