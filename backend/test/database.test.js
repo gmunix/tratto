@@ -46,3 +46,42 @@ test('database reset rebuilds and seeds an isolated SQLite file', () => {
     testDatabase.cleanup()
   }
 })
+
+test('seed data backfills user-aware Tratto relationships', () => {
+  const testDatabase = createTestDatabase()
+
+  try {
+    runBackendScript('resetDatabase.js', testDatabase.path)
+
+    const db = openTestDatabase(testDatabase.path)
+    const tratto = db
+      .prepare(
+        `SELECT creator_id, community_id, rules_json
+        FROM trattos
+        WHERE id = 'trt-0001'`,
+      )
+      .get()
+    const participant = db
+      .prepare(
+        `SELECT user_id, invited_by_user_id, invited_at
+        FROM tratto_participants
+        WHERE id = 'trt-0001-julia'`,
+      )
+      .get()
+    const evidence = db
+      .prepare("SELECT author_user_id FROM evidences WHERE id = 'ev-001'")
+      .get()
+
+    db.close()
+
+    assert.equal(tratto.creator_id, 'usr-marcos')
+    assert.equal(tratto.community_id, 'com-republica-404')
+    assert.equal(JSON.parse(tratto.rules_json).length, 4)
+    assert.equal(participant.user_id, 'usr-julia')
+    assert.equal(participant.invited_by_user_id, 'usr-marcos')
+    assert.equal(participant.invited_at, '2026-05-01T12:00:00.000Z')
+    assert.equal(evidence.author_user_id, 'usr-marcos')
+  } finally {
+    testDatabase.cleanup()
+  }
+})
