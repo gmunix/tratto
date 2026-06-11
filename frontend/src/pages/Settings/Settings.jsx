@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@components/common/Button'
 import { Field } from '@components/common/Field'
@@ -10,20 +10,38 @@ import { currentUser } from '@/data/mockTrattos'
 
 export function Settings() {
   const [theme, setTheme] = useState(getColorScheme)
+  const [savedMessage, setSavedMessage] = useState('')
+  const savedTimeoutRef = useRef(null)
 
   useEffect(() => {
     saveColorScheme(theme)
   }, [theme])
 
+  useEffect(() => {
+    return () => window.clearTimeout(savedTimeoutRef.current)
+  }, [])
+
+  function showSaved(message = 'Ajustes salvos localmente.') {
+    window.clearTimeout(savedTimeoutRef.current)
+    setSavedMessage(message)
+    savedTimeoutRef.current = window.setTimeout(() => setSavedMessage(''), 2200)
+  }
+
   function applyTheme(nextTheme) {
     setTheme(nextTheme)
+    showSaved(`Tema ${nextTheme} aplicado neste usuário.`)
+  }
+
+  function submitProfile(event) {
+    event.preventDefault()
+    showSaved('Perfil mockado salvo para a próxima ata.')
   }
 
   return (
     <AppLayout title="Ajustes">
       <PageContainer className="page-grid">
         <div className="stack stack--large">
-          <Panel bodyClassName="form-grid" title="Perfil" titleAs="h1">
+          <Panel as="form" bodyClassName="form-grid" onSubmit={submitProfile} title="Perfil" titleAs="h1">
             <div className="avatar-placeholder">{currentUser.initials}</div>
             <Field htmlFor="display-name" label="Nome exibido">
               <input className="input" defaultValue={currentUser.name} id="display-name" />
@@ -31,20 +49,22 @@ export function Settings() {
             <Field htmlFor="user-slug" label="Slug público">
               <input className="input" defaultValue={currentUser.slug} id="user-slug" />
             </Field>
+            <Button type="submit">Salvar perfil</Button>
+            {savedMessage ? <p className="pixel-feedback">{savedMessage}</p> : null}
           </Panel>
 
           <Panel bodyClassName="form-grid" title="Notificações">
             <label className="toggle-row">
               <span>Alertas no app</span>
-              <input defaultChecked type="checkbox" />
+              <input defaultChecked onChange={() => showSaved()} type="checkbox" />
             </label>
             <label className="toggle-row">
               <span>Resumo por email</span>
-              <input type="checkbox" />
+              <input onChange={() => showSaved()} type="checkbox" />
             </label>
             <label className="toggle-row">
               <span>Manter itens novos destacados</span>
-              <input defaultChecked type="checkbox" />
+              <input defaultChecked onChange={() => showSaved()} type="checkbox" />
             </label>
           </Panel>
         </div>

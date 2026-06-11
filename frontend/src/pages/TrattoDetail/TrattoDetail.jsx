@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { Button } from '@components/common/Button'
@@ -27,7 +27,17 @@ export function TrattoDetail() {
   const tratto = getTrattoById(trattoId)
   const [evidenceType, setEvidenceType] = useState('text')
   const [evidenceText, setEvidenceText] = useState('')
+  const [evidencePhoto, setEvidencePhoto] = useState(null)
   const [localEvidence, setLocalEvidence] = useState([])
+  const [evidenceFeedback, setEvidenceFeedback] = useState('')
+  const [submittedEvidenceId, setSubmittedEvidenceId] = useState('')
+  const evidencePhotoInputRef = useRef(null)
+  const evidenceFeedbackTimeoutRef = useRef(null)
+  const localEvidenceCounterRef = useRef(0)
+
+  useEffect(() => {
+    return () => window.clearTimeout(evidenceFeedbackTimeoutRef.current)
+  }, [])
 
   if (!tratto) {
     return (
@@ -48,21 +58,64 @@ export function TrattoDetail() {
   function submitEvidence(event) {
     event.preventDefault()
 
-    if (!evidenceText.trim()) {
+    if (!evidenceText.trim() && !(evidenceType === 'image' && evidencePhoto)) {
       return
     }
+
+    localEvidenceCounterRef.current += 1
+    const nextEvidenceId = `local-${localEvidenceCounterRef.current}`
 
     setLocalEvidence((currentEvidence) => [
       ...currentEvidence,
       {
-        id: `local-${Date.now()}`,
+        id: nextEvidenceId,
         author: 'Você',
         type: evidenceType,
-        content: evidenceText.trim(),
+        content: evidenceText.trim() || 'Imagem anexada para perícia social.',
+        metadata: evidenceType === 'image' && evidencePhoto
+          ? { filename: evidencePhoto.filename, previewUrl: evidencePhoto.previewUrl }
+          : undefined,
         createdAt: new Date().toLocaleString('pt-BR'),
       },
     ])
     setEvidenceText('')
+    clearEvidencePhoto()
+    setEvidenceFeedback('Evidência protocolada no arquivo pixelado.')
+    setSubmittedEvidenceId(nextEvidenceId)
+    window.clearTimeout(evidenceFeedbackTimeoutRef.current)
+    evidenceFeedbackTimeoutRef.current = window.setTimeout(() => {
+      setEvidenceFeedback('')
+      setSubmittedEvidenceId('')
+    }, 2200)
+  }
+
+  function clearEvidencePhoto() {
+    setEvidencePhoto(null)
+    if (evidencePhotoInputRef.current) {
+      evidencePhotoInputRef.current.value = ''
+    }
+  }
+
+  function handleEvidencePhotoChange(event) {
+    const file = event.target.files?.[0]
+
+    if (!file) {
+      clearEvidencePhoto()
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      setEvidencePhoto({ filename: file.name, previewUrl: String(reader.result) })
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function selectEvidenceType(type) {
+    setEvidenceType(type)
+    if (type !== 'image') {
+      clearEvidencePhoto()
+    }
   }
 
   return (
@@ -90,13 +143,21 @@ export function TrattoDetail() {
           ) : null}
 
           <Panel
-            actions={<span className="muted-label">{allEvidence.length} itens</span>}
+            actions={
+              <span className="muted-label evidence-count" key={allEvidence.length}>
+                {allEvidence.length} itens
+              </span>
+            }
             title="Registro de evidências"
           >
               {allEvidence.length ? (
                 <div className="timeline">
                   {allEvidence.map((evidence) => (
-                    <article className="timeline-item" key={evidence.id}>
+                    <article
+                      className="timeline-item"
+                      data-submitted={evidence.id === submittedEvidenceId}
+                      key={evidence.id}
+                    >
                       <div className="timeline-item__header">
                         <div>
                           <p className="section-title">{evidence.author}</p>
@@ -108,7 +169,15 @@ export function TrattoDetail() {
                       </div>
                       {evidence.type === 'image' ? (
                         <div className="evidence-preview" aria-label="Prévia mockada de imagem">
-                          <span className="evidence-preview__icon">IMG</span>
+                          {evidence.metadata?.previewUrl ? (
+                            <img
+                              alt={`Prévia de ${evidence.metadata.filename}`}
+                              className="evidence-preview__image"
+                              src={evidence.metadata.previewUrl}
+                            />
+                          ) : (
+                            <span className="evidence-preview__icon">IMG</span>
+                          )}
                           <span>{evidence.metadata?.filename ?? 'foto-evidencia.png'}</span>
                         </div>
                       ) : null}
@@ -127,7 +196,7 @@ export function TrattoDetail() {
                   {Object.entries(evidenceTypeLabels).map(([type, label]) => (
                     <Button
                       key={type}
-                      onClick={() => setEvidenceType(type)}
+                      onClick={() => selectEvidenceType(type)}
                       type="button"
                       variant={evidenceType === type ? 'primary' : 'secondary'}
                     >
@@ -139,9 +208,39 @@ export function TrattoDetail() {
                   Conteúdo da evidência
                 </label>
                 {evidenceType === 'image' ? (
-                  <div className="evidence-upload-mock">
-                    <span className="evidence-upload-mock__frame" />
-                    <span>Upload de foto será conectado ao backend. Por enquanto, descreva a imagem.</span>
+                  <div className={`evidence-upload-mock${evidencePhoto ? ' has-preview' : ''}`}>
+                    {evidencePhoto?.previewUrl ? (
+                      <img
+                        alt={`Prévia de ${evidencePhoto.filename}`}
+                        className="evidence-preview__image"
+                        src={evidencePhoto.previewUrl}
+                      />
+                    ) : (
+                      <span className="evidence-upload-mock__frame" />
+                    )}
+                    <div className="stack" style={{ gap: 8 }}>
+                      <span>
+                        {evidencePhoto
+                          ? evidencePhoto.filename
+                          : 'Selecione uma foto local para anexar como prova mockada.'}
+                      </span>
+                      <Button
+                        className="evidence-upload-mock__button"
+                        onClick={() => evidencePhotoInputRef.current?.click()}
+                        type="button"
+                        variant="secondary"
+                      >
+                        Escolher imagem
+                      </Button>
+                      <input
+                        accept="image/*"
+                        className="visually-hidden"
+                        id="evidence-photo"
+                        onChange={handleEvidencePhotoChange}
+                        ref={evidencePhotoInputRef}
+                        type="file"
+                      />
+                    </div>
                   </div>
                 ) : null}
                 <textarea
@@ -151,9 +250,15 @@ export function TrattoDetail() {
                   placeholder="Descreva a prova, cole um link ou registre uma confissão cuidadosamente redigida."
                   value={evidenceText}
                 />
-                <Button disabled={!evidenceText.trim()} type="submit">
+                <Button disabled={!evidenceText.trim() && !(evidenceType === 'image' && evidencePhoto)} type="submit">
                   Enviar ao conselho
                 </Button>
+                {evidenceFeedback ? (
+                  <div className="evidence-submit-feedback" aria-live="polite">
+                    <p className="pixel-feedback">{evidenceFeedback}</p>
+                    <span className="case-filed-stamp">Protocolado</span>
+                  </div>
+                ) : null}
             </Panel>
           ) : null}
         </div>
