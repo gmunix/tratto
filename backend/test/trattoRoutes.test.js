@@ -179,7 +179,7 @@ test('POST /api/trattos creates standalone Tratto with creator and invited parti
   ])
 })
 
-test('POST /api/trattos rejects duplicate participant display names', async () => {
+test('POST /api/trattos allows participants who share a display name', async () => {
   const creator = await registerUser({ email: 'duplicate-name-creator@example.com', slug: 'duplicate-name-creator', displayName: 'Duplicate Name Creator' })
   const firstParticipant = await registerUser({ email: 'duplicate-name-one@example.com', slug: 'duplicate-name-one', displayName: 'Same Display Name' })
   const secondParticipant = await registerUser({ email: 'duplicate-name-two@example.com', slug: 'duplicate-name-two', displayName: 'Same Display Name' })
@@ -192,10 +192,14 @@ test('POST /api/trattos rejects duplicate participant display names', async () =
         participantSlugs: [firstParticipant.user.slug, secondParticipant.user.slug],
       }),
     )
-    .expect(409)
+    .expect(201)
 
-  assert.equal(response.body.code, 'CONFLICT')
-  assert.equal(response.body.fields.participants, 'duplicate_display_name')
+  const participantSlugs = response.body.tratto.participants
+    .filter((entry) => entry.role === 'participant')
+    .map((entry) => entry.user.slug)
+    .sort()
+
+  assert.deepEqual(participantSlugs, ['duplicate-name-one', 'duplicate-name-two'])
 })
 
 test('POST /api/trattos creates community Tratto only for approved members', async () => {
