@@ -905,18 +905,6 @@ function enforceCreateRules({ input, participants, judge, community, currentUser
     throw conflictError('Duplicate participant slugs', { participantSlugs: 'duplicate' })
   }
 
-  const participantDisplayNames = [currentUser, ...participants]
-
-  if (judge) {
-    participantDisplayNames.push(judge)
-  }
-
-  if (hasDuplicateDisplayNames(participantDisplayNames)) {
-    throw conflictError('Tratto participants must have unique display names', {
-      participants: 'duplicate_display_name',
-    })
-  }
-
   if (judge && (judge.id === currentUser.id || invitedUserIds.has(judge.id))) {
     throw conflictError('Judge must be distinct from creator and participants', {
       judgeSlug: 'duplicate_user',
@@ -973,11 +961,6 @@ function normalizeOptionalSlug(value, fields, fieldName) {
 
 function isSlug(value) {
   return /^[a-z0-9-]{3,64}$/.test(value)
-}
-
-function hasDuplicateDisplayNames(users) {
-  const displayNames = users.map((user) => normalizeString(user.displayName).toLowerCase())
-  return new Set(displayNames).size !== displayNames.length
 }
 
 function isPlainObject(value) {
