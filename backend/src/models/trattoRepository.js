@@ -101,7 +101,7 @@ export function createTratto(input, creator, { db = defaultDb, now = new Date().
       role: 'creator',
       inviteStatus: 'accepted',
       acceptedAt: now,
-      invitedByUserId: creator.id,
+      invitedByUserId: null,
       invitedAt: now,
       createdAt: now,
     })

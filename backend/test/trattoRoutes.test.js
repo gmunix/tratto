@@ -152,16 +152,50 @@ test('POST /api/trattos creates standalone Tratto with creator and invited parti
     .expect(201)
 
   const rows = db
-    .prepare('SELECT user_id, role, invite_status FROM tratto_participants WHERE tratto_id = ? ORDER BY role')
+    .prepare(
+      `SELECT user_id, role, invite_status, invited_by_user_id
+      FROM tratto_participants
+      WHERE tratto_id = ?
+      ORDER BY role`,
+    )
     .all(response.body.tratto.id)
 
   assert.equal(response.body.tratto.creator.id, creator.user.id)
   assert.equal(response.body.tratto.community, null)
   assert.deepEqual(response.body.tratto.participantNames, ['Create Creator', 'Create Participant'])
   assert.deepEqual(rows, [
-    { user_id: creator.user.id, role: 'creator', invite_status: 'accepted' },
-    { user_id: participant.user.id, role: 'participant', invite_status: 'pending' },
+    {
+      user_id: creator.user.id,
+      role: 'creator',
+      invite_status: 'accepted',
+      invited_by_user_id: null,
+    },
+    {
+      user_id: participant.user.id,
+      role: 'participant',
+      invite_status: 'pending',
+      invited_by_user_id: creator.user.id,
+    },
   ])
+})
+
+test('POST /api/trattos rejects duplicate participant display names', async () => {
+  const creator = await registerUser({ email: 'duplicate-name-creator@example.com', slug: 'duplicate-name-creator', displayName: 'Duplicate Name Creator' })
+  const firstParticipant = await registerUser({ email: 'duplicate-name-one@example.com', slug: 'duplicate-name-one', displayName: 'Same Display Name' })
+  const secondParticipant = await registerUser({ email: 'duplicate-name-two@example.com', slug: 'duplicate-name-two', displayName: 'Same Display Name' })
+
+  const response = await request(app)
+    .post('/api/trattos')
+    .set('Authorization', `Bearer ${creator.token}`)
+    .send(
+      createPayload({
+        participantSlugs: [firstParticipant.user.slug, secondParticipant.user.slug],
+      }),
+    )
+    .expect(409)
+
+  assert.equal(response.body.code, 'CONFLICT')
+  assert.equal(response.body.fields.participants, 'duplicate_display_name')
 })
 
 test('POST /api/trattos creates community Tratto only for approved members', async () => {
