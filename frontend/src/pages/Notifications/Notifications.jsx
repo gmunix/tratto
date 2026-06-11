@@ -1,10 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { Button } from '@components/common/Button'
 import { AppLayout } from '@components/layout/AppLayout'
 import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
-import { mockNotifications } from '@/data/mockTrattos'
+import {
+  getMockNotifications,
+  markAllMockNotificationsAsRead,
+  markMockNotificationAsRead,
+  subscribeToMockNotificationState,
+} from '@/data/mockNotificationState'
 
 const notificationTypeLabels = {
   invite: 'Convite',
@@ -16,26 +21,21 @@ const notificationTypeLabels = {
 }
 
 export function Notifications() {
-  const [notifications, setNotifications] = useState(mockNotifications)
+  const [notifications, setNotifications] = useState(getMockNotifications)
   const unreadCount = notifications.filter((notification) => !notification.readAt).length
 
+  useEffect(() => {
+    return subscribeToMockNotificationState(() => {
+      setNotifications(getMockNotifications())
+    })
+  }, [])
+
   function markAsRead(notificationId) {
-    setNotifications((currentNotifications) =>
-      currentNotifications.map((notification) =>
-        notification.id === notificationId
-          ? { ...notification, readAt: notification.readAt ?? 'lido agora' }
-          : notification,
-      ),
-    )
+    markMockNotificationAsRead(notificationId)
   }
 
   function markAllAsRead() {
-    setNotifications((currentNotifications) =>
-      currentNotifications.map((notification) => ({
-        ...notification,
-        readAt: notification.readAt ?? 'lido agora',
-      })),
-    )
+    markAllMockNotificationsAsRead()
   }
 
   return (

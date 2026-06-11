@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { Button } from '@components/common/Button'
@@ -30,6 +30,7 @@ export function TrattoDetail() {
   const [evidencePhoto, setEvidencePhoto] = useState(null)
   const [localEvidence, setLocalEvidence] = useState([])
   const [evidenceFeedback, setEvidenceFeedback] = useState('')
+  const evidencePhotoInputRef = useRef(null)
 
   if (!tratto) {
     return (
@@ -68,16 +69,23 @@ export function TrattoDetail() {
       },
     ])
     setEvidenceText('')
-    setEvidencePhoto(null)
+    clearEvidencePhoto()
     setEvidenceFeedback('Evidência protocolada no arquivo pixelado.')
     window.setTimeout(() => setEvidenceFeedback(''), 2200)
+  }
+
+  function clearEvidencePhoto() {
+    setEvidencePhoto(null)
+    if (evidencePhotoInputRef.current) {
+      evidencePhotoInputRef.current.value = ''
+    }
   }
 
   function handleEvidencePhotoChange(event) {
     const file = event.target.files?.[0]
 
     if (!file) {
-      setEvidencePhoto(null)
+      clearEvidencePhoto()
       return
     }
 
@@ -91,7 +99,7 @@ export function TrattoDetail() {
   function selectEvidenceType(type) {
     setEvidenceType(type)
     if (type !== 'image') {
-      setEvidencePhoto(null)
+      clearEvidencePhoto()
     }
   }
 
@@ -193,14 +201,20 @@ export function TrattoDetail() {
                           ? evidencePhoto.filename
                           : 'Selecione uma foto local para anexar como prova mockada.'}
                       </span>
-                      <label className="button button--secondary evidence-upload-mock__button" htmlFor="evidence-photo">
+                      <Button
+                        className="evidence-upload-mock__button"
+                        onClick={() => evidencePhotoInputRef.current?.click()}
+                        type="button"
+                        variant="secondary"
+                      >
                         Escolher imagem
-                      </label>
+                      </Button>
                       <input
                         accept="image/*"
                         className="visually-hidden"
                         id="evidence-photo"
                         onChange={handleEvidencePhotoChange}
+                        ref={evidencePhotoInputRef}
                         type="file"
                       />
                     </div>
