@@ -159,7 +159,7 @@ test('adding evidence creates notifications for other accepted participants', as
   await request(app)
     .post('/api/trattos/trt-evidence-notify/evidences')
     .set('Authorization', `Bearer ${creator.token}`)
-    .send({ type: 'image', content: 'https://example.com/image.png', metadata: { caption: 'Foto' } })
+    .send({ type: 'link', content: 'https://example.com/image.png', metadata: { caption: 'Foto' } })
     .expect(201)
 
   const participantNotifications = await request(app)

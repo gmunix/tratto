@@ -25,4 +25,6 @@ export const environment = {
   authTokenTtlDays: parseAuthTokenTtlDays(
     process.env.AUTH_TOKEN_TTL_DAYS ?? defaultAuthTokenTtlDays,
   ),
+  uploadDir: process.env.UPLOAD_DIR ?? './data/uploads',
+  uploadMaxBytes: Number(process.env.UPLOAD_MAX_BYTES ?? 5 * 1024 * 1024),
 }

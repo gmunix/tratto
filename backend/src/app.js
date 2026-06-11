@@ -1,3 +1,5 @@
+import path from 'node:path'
+
 import cors from 'cors'
 import express from 'express'
 
@@ -11,6 +13,7 @@ export const app = express()
 app.use(cors({ origin: environment.corsOrigin }))
 app.use(express.json())
 
+app.use('/uploads', express.static(path.resolve(environment.uploadDir)))
 app.use('/api', routes)
 
 app.use(notFoundHandler)

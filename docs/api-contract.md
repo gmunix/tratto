@@ -428,9 +428,46 @@ Response `201`:
 
 Rules:
 
-- `type` can be `text`, `link`, `image`, or `file` in storage.
-- First implementation may accept only `text` and `link` while returning `400` for upload types until file upload exists.
+- This route accepts `type` of `text` or `link` only. Use the upload route below for `image` / `file`.
 - Mention parsing detects `@slug` in `content` and creates `mention` notifications for accepted participants whose slug matches.
+
+### Upload Evidence
+
+`POST /api/trattos/:id/evidences/upload`
+
+Multipart `form-data` request:
+
+- `file`: the binary upload.
+- `type`: `image` or `file`.
+- `caption` (optional): display text used as the evidence `content`. Falls back to the original filename.
+
+Response `201`:
+
+```json
+{
+  "evidence": {
+    "id": "ev-xyz",
+    "type": "image",
+    "content": "Foto da prova",
+    "metadata": {
+      "fileUrl": "/uploads/abc.png",
+      "mimeType": "image/png",
+      "originalName": "prova.png",
+      "sizeBytes": 14
+    }
+  },
+  "tratto": {}
+}
+```
+
+Rules:
+
+- Uses bearer auth like other evidence routes; only accepted creator/participant can upload, only while status is `active` or `review`.
+- `image` accepts `image/png`, `image/jpeg`, `image/gif`, `image/webp`. `file` additionally accepts `application/pdf`, `text/plain`, `application/zip`.
+- Files exceeding `UPLOAD_MAX_BYTES` (default 5 MB) return `400` with `fields.file = "too_large"`.
+- Unsupported mimes return `400` with `fields.file = "unsupported_type"`.
+- Stored files are served from `GET /uploads/:filename` (no auth — keep filenames opaque).
+- Mention parsing runs on `caption`, same as text evidence.
 
 ### Add Comment
 

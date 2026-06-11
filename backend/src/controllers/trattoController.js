@@ -27,7 +27,8 @@ const statuses = new Set([
   'compliance',
 ])
 const decisionMethods = new Set(['mutual', 'vote', 'judge'])
-const evidenceTypes = new Set(['text', 'link', 'image', 'file'])
+const jsonEvidenceTypes = new Set(['text', 'link'])
+const uploadEvidenceTypes = new Set(['image', 'file'])
 const voteValues = new Set(['winner', 'abstain'])
 
 export function listTrattos(request, response, next) {
@@ -104,6 +105,59 @@ export function addEvidence(request, response, next) {
       const created = createEvidenceForTratto(tratto.id, input, request.user, currentParticipant, { db })
       const evidenceNotifications = buildEvidenceNotifications(created.tratto, request.user)
       const mentionNotifications = buildMentionNotifications(created.tratto, request.user, input.content, 'evidence')
+      createNotifications([...evidenceNotifications, ...mentionNotifications], { db })
+
+      return created
+    })()
+
+    return response.status(201).json({
+      evidence: toEvidenceDto(result.evidence),
+      tratto: toTrattoDetailDto(result.tratto, request.user.id),
+    })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+export function uploadEvidenceRoute(request, response, next) {
+  try {
+    if (!request.file) {
+      throw validationError('File is required', { file: 'required' })
+    }
+
+    const type = normalizeString(request.body?.type)
+
+    if (!uploadEvidenceTypes.has(type)) {
+      throw validationError('Invalid evidence type for upload', { type: 'invalid' })
+    }
+
+    const tratto = findTrattoById(request.params.id)
+
+    if (!tratto) {
+      throw httpError(404, 'Tratto not found', 'NOT_FOUND')
+    }
+
+    const currentParticipant = findParticipantForUser(tratto, request.user.id)
+    enforceEvidenceRules(tratto, currentParticipant)
+
+    const caption = normalizeString(request.body?.caption) || request.file.originalname
+    const metadata = {
+      fileUrl: `/uploads/${request.file.filename}`,
+      mimeType: request.file.mimetype,
+      originalName: request.file.originalname,
+      sizeBytes: request.file.size,
+    }
+
+    const result = db.transaction(() => {
+      const created = createEvidenceForTratto(
+        tratto.id,
+        { type, content: caption, metadata },
+        request.user,
+        currentParticipant,
+        { db },
+      )
+      const evidenceNotifications = buildEvidenceNotifications(created.tratto, request.user)
+      const mentionNotifications = buildMentionNotifications(created.tratto, request.user, caption, 'evidence')
       createNotifications([...evidenceNotifications, ...mentionNotifications], { db })
 
       return created
@@ -575,8 +629,8 @@ function validateEvidenceInput(body) {
   const content = normalizeString(body?.content)
   const metadata = body?.metadata ?? null
 
-  if (!evidenceTypes.has(type)) {
-    fields.type = 'invalid'
+  if (!jsonEvidenceTypes.has(type)) {
+    fields.type = uploadEvidenceTypes.has(type) ? 'use_upload_route' : 'invalid'
   }
 
   if (!content) {
