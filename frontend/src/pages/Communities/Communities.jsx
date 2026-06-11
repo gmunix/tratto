@@ -4,7 +4,7 @@ import { Button } from '@components/common/Button'
 import { AppLayout } from '@components/layout/AppLayout'
 import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
-import { currentUser, mockCommunities } from '@/data/mockTrattos'
+import { currentUser, getActiveCommunityTrattoCount, mockCommunities } from '@/data/mockTrattos'
 
 export function Communities() {
   const [query, setQuery] = useState('')
@@ -54,7 +54,7 @@ function CommunitySection({ communities, title }) {
             <div className="community-card__meta">
               <span>{community.privacy === 'public' ? 'Pública' : 'Privada'}</span>
               <span>{community.memberCount} membros</span>
-              <span>{community.activeTrattos} ativos</span>
+              <span>{getActiveCommunityTrattoCount(community.id)} ativos</span>
             </div>
             <Button to={`/comunidades/${community.slug}`} variant="secondary">
               Abrir comunidade

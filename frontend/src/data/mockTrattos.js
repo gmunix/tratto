@@ -80,7 +80,6 @@ export const mockCommunities = [
     privacy: 'private',
     creatorId: currentUser.id,
     memberCount: 7,
-    activeTrattos: 2,
     description: 'Moradores, agregados e visitantes sob auditoria de tarefas domésticas.',
     members: [
       { userId: currentUser.id, role: 'creator', status: 'member' },
@@ -95,7 +94,6 @@ export const mockCommunities = [
     privacy: 'public',
     creatorId: 'usr-0101',
     memberCount: 18,
-    activeTrattos: 4,
     description: 'Promessas fitness feitas entre uma batata frita e outra.',
     members: [
       { userId: 'usr-0101', role: 'creator', status: 'member' },
@@ -109,7 +107,6 @@ export const mockCommunities = [
     privacy: 'public',
     creatorId: 'usr-0104',
     memberCount: 31,
-    activeTrattos: 6,
     description: 'Julgamento popular de repertório cultural com ata e pipoca.',
     members: [{ userId: 'usr-0104', role: 'creator', status: 'member' }],
   },
@@ -141,6 +138,7 @@ export const mockTrattos = [
     createdAt: '2026-05-01',
     decisionMethod: 'vote',
     judge: '',
+    judgeUserId: null,
     progress: 42,
     evidence: [
       {
@@ -192,6 +190,7 @@ export const mockTrattos = [
     createdAt: '2026-05-15',
     decisionMethod: 'mutual',
     judge: '',
+    judgeUserId: null,
     progress: 0,
     evidence: [],
     comments: [],
@@ -220,6 +219,7 @@ export const mockTrattos = [
     createdAt: '2026-04-01',
     decisionMethod: 'mutual',
     judge: 'Beto Alves',
+    judgeUserId: 'usr-0104',
     progress: 100,
     evidence: [
       {
@@ -264,6 +264,7 @@ export const mockTrattos = [
     createdAt: '2026-05-05',
     decisionMethod: 'judge',
     judge: 'Lara Costa',
+    judgeUserId: 'usr-0102',
     progress: 80,
     evidence: [
       {
@@ -309,6 +310,7 @@ export const mockTrattos = [
     createdAt: '2026-03-31',
     decisionMethod: 'mutual',
     judge: '',
+    judgeUserId: null,
     progress: 100,
     evidence: [
       {
@@ -417,6 +419,12 @@ export function getCommunityBySlug(communitySlug) {
   return mockCommunities.find((community) => community.slug === communitySlug)
 }
 
+export function getCommunityBySlugOrId(communitySlugOrId) {
+  return mockCommunities.find(
+    (community) => community.slug === communitySlugOrId || community.id === communitySlugOrId,
+  )
+}
+
 export function getUserById(userId) {
   return mockUsers.find((user) => user.id === userId)
 }
@@ -427,4 +435,10 @@ export function getParticipantNames(tratto) {
 
 export function getCommunityTrattos(communityId) {
   return mockTrattos.filter((tratto) => tratto.communityId === communityId)
+}
+
+export function getActiveCommunityTrattoCount(communityId) {
+  return getCommunityTrattos(communityId).filter((tratto) =>
+    ['active', 'review', 'compliance'].includes(tratto.status),
+  ).length
 }

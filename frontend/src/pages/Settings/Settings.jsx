@@ -5,14 +5,14 @@ import { Field } from '@components/common/Field'
 import { AppLayout } from '@components/layout/AppLayout'
 import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
+import { getColorScheme, saveColorScheme } from '@/config/theme'
 import { currentUser } from '@/data/mockTrattos'
 
 export function Settings() {
-  const [theme, setTheme] = useState(document.documentElement.dataset.theme || currentUser.theme)
+  const [theme, setTheme] = useState(getColorScheme)
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme
-    window.localStorage.setItem('tratto-theme', theme)
+    saveColorScheme(theme)
   }, [theme])
 
   function applyTheme(nextTheme) {

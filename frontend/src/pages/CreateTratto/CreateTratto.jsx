@@ -1,11 +1,12 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 import { Button } from '@components/common/Button'
 import { Field } from '@components/common/Field'
 import { AppLayout } from '@components/layout/AppLayout'
 import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
-import { decisionMethodLabels, trattoCategories } from '@/data/mockTrattos'
+import { decisionMethodLabels, getCommunityBySlugOrId, trattoCategories } from '@/data/mockTrattos'
 
 const initialForm = {
   title: '',
@@ -25,6 +26,8 @@ function createProtocol() {
 }
 
 export function CreateTratto() {
+  const [searchParams] = useSearchParams()
+  const selectedCommunity = getCommunityBySlugOrId(searchParams.get('community'))
   const [form, setForm] = useState(initialForm)
   const [submitted, setSubmitted] = useState(false)
   const [protocol, setProtocol] = useState(createProtocol)
@@ -99,7 +102,11 @@ export function CreateTratto() {
           <Panel
             bodyClassName="stack stack--large"
             className="panel--narrow"
-            subtitle="O trato foi enviado ao cartório social. Participantes serão notificados assim que o backend existir."
+            subtitle={
+              selectedCommunity
+                ? `O trato foi vinculado à comunidade /${selectedCommunity.slug}. Participantes serão notificados assim que o backend existir.`
+                : 'O trato foi enviado ao cartório social. Participantes serão notificados assim que o backend existir.'
+            }
             title={`Protocolo ${protocol}`}
             titleAs="p"
           >
@@ -110,9 +117,15 @@ export function CreateTratto() {
               nenhum. Valor no grupo: altíssimo.
             </p>
 
+            {selectedCommunity ? (
+              <p className="notice">
+                Comunidade vinculada: {selectedCommunity.name}. O futuro payload usaria communityId {selectedCommunity.id}.
+              </p>
+            ) : null}
+
             <div className="button-row button-row--stack-mobile">
-              <Button to="/dashboard">
-                Voltar ao painel
+              <Button to={selectedCommunity ? `/comunidades/${selectedCommunity.slug}` : '/dashboard'}>
+                {selectedCommunity ? 'Voltar à comunidade' : 'Voltar ao painel'}
               </Button>
               <Button
                 onClick={() => {
@@ -144,6 +157,12 @@ export function CreateTratto() {
           title="Formulário TRT-A1"
           titleAs="h1"
         >
+            {selectedCommunity ? (
+              <div className="notice">
+                Comunidade selecionada: {selectedCommunity.name} /{selectedCommunity.slug}. Este trato mockado será criado com communityId {selectedCommunity.id}.
+              </div>
+            ) : null}
+
             <Field htmlFor="tratto-category" label="Categoria">
               <select
                 className="select"

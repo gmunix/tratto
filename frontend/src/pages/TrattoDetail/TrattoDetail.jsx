@@ -43,10 +43,7 @@ export function TrattoDetail() {
   const isOpen = ['active', 'review'].includes(tratto.status)
   const isClosed = ['finished', 'loser-detected', 'cancelled'].includes(tratto.status)
   const canRequestJudgment =
-    tratto.creatorId === currentUser.id ||
-    tratto.participants.some(
-      (participant) => participant.userId === currentUser.id && participant.role === 'judge',
-    )
+    tratto.creatorId === currentUser.id || tratto.judgeUserId === currentUser.id
 
   function submitEvidence(event) {
     event.preventDefault()
