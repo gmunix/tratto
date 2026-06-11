@@ -26,19 +26,55 @@ export async function hashPassword(password) {
 }
 
 export async function verifyPassword(password, storedHash) {
-  const [algorithm, cost, blockSize, parallelization, salt, hash] =
-    storedHash.split(':')
-
-  if (algorithm !== 'scrypt' || !salt || !hash) {
+  if (typeof storedHash !== 'string') {
     return false
   }
 
-  const storedKey = Buffer.from(hash, 'hex')
-  const derivedKey = await scryptAsync(password, salt, storedKey.length, {
+  const parts = storedHash.split(':')
+  const [algorithm, cost, blockSize, parallelization, salt, hash] = parts
+  const params = {
     cost: Number(cost),
     blockSize: Number(blockSize),
     parallelization: Number(parallelization),
-  })
+  }
 
-  return timingSafeEqual(storedKey, derivedKey)
+  if (
+    parts.length !== 6 ||
+    algorithm !== 'scrypt' ||
+    !isPositiveSafeInteger(params.cost) ||
+    !isPowerOfTwo(params.cost) ||
+    !isPositiveSafeInteger(params.blockSize) ||
+    !isPositiveSafeInteger(params.parallelization) ||
+    !isHex(salt) ||
+    !isHex(hash) ||
+    hash.length !== keyLength * 2
+  ) {
+    return false
+  }
+
+  try {
+    const storedKey = Buffer.from(hash, 'hex')
+    const derivedKey = await scryptAsync(password, salt, storedKey.length, params)
+
+    return timingSafeEqual(storedKey, derivedKey)
+  } catch {
+    return false
+  }
+}
+
+function isPositiveSafeInteger(value) {
+  return Number.isSafeInteger(value) && value > 0
+}
+
+function isPowerOfTwo(value) {
+  return value > 1 && Number.isInteger(Math.log2(value))
+}
+
+function isHex(value) {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length % 2 === 0 &&
+    /^[0-9a-f]+$/i.test(value)
+  )
 }

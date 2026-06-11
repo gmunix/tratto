@@ -2,6 +2,10 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
+  defaultAuthTokenTtlDays,
+  parseAuthTokenTtlDays,
+} from '../src/config/environment.js'
+import {
   createAuthToken,
   deleteExpiredAuthTokens,
   findAuthTokenByToken,
@@ -231,4 +235,39 @@ test('password hashing stores verifiable hashes instead of plain passwords', asy
   assert.notEqual(passwordHash, 'Senha123!')
   assert.equal(await verifyPassword('Senha123!', passwordHash), true)
   assert.equal(await verifyPassword('senha-errada', passwordHash), false)
+})
+
+test('password verification fails closed for malformed hashes', async () => {
+  const malformedHashes = [
+    null,
+    '',
+    'plain-password',
+    'scrypt:16384:8:1:abcd:' + 'a'.repeat(128) + ':extra',
+    'bcrypt:16384:8:1:abcd:' + 'a'.repeat(128),
+    'scrypt:not-a-number:8:1:abcd:' + 'a'.repeat(128),
+    'scrypt:0:8:1:abcd:' + 'a'.repeat(128),
+    'scrypt:1:8:1:abcd:' + 'a'.repeat(128),
+    'scrypt:-1:8:1:abcd:' + 'a'.repeat(128),
+    'scrypt:3:8:1:abcd:' + 'a'.repeat(128),
+    'scrypt:16384:0:1:abcd:' + 'a'.repeat(128),
+    'scrypt:16384:8:0:abcd:' + 'a'.repeat(128),
+    'scrypt:16384:8:1:abc:' + 'a'.repeat(128),
+    'scrypt:16384:8:1:not-hex:' + 'a'.repeat(128),
+    'scrypt:16384:8:1:abcd:not-hex',
+    'scrypt:16384:8:1:abcd:' + 'a'.repeat(127),
+  ]
+
+  for (const malformedHash of malformedHashes) {
+    assert.equal(await verifyPassword('Senha123!', malformedHash), false)
+  }
+})
+
+test('auth token TTL parsing falls back to a safe default for invalid values', () => {
+  assert.equal(parseAuthTokenTtlDays(undefined), defaultAuthTokenTtlDays)
+  assert.equal(parseAuthTokenTtlDays('not-a-number'), defaultAuthTokenTtlDays)
+  assert.equal(parseAuthTokenTtlDays('0'), defaultAuthTokenTtlDays)
+  assert.equal(parseAuthTokenTtlDays('-1'), defaultAuthTokenTtlDays)
+  assert.equal(parseAuthTokenTtlDays('Infinity'), defaultAuthTokenTtlDays)
+  assert.equal(parseAuthTokenTtlDays('0.5'), 0.5)
+  assert.equal(parseAuthTokenTtlDays('14'), 14)
 })
