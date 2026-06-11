@@ -4,9 +4,13 @@ import { findUserBySlug } from '../models/userRepository.js'
 import {
   createEvidenceForTratto,
   createTratto,
+  createVerdictForTratto,
   findTrattoById,
+  findVerdictByTrattoId,
   findVisibleTrattoById,
   listVisibleTrattosForUser,
+  updateTrattoStatus,
+  upsertVote,
   userHasApprovedCommunityMembership,
 } from '../models/trattoRepository.js'
 import { conflictError, httpError, validationError } from '../utils/httpErrors.js'
@@ -23,6 +27,7 @@ const statuses = new Set([
 ])
 const decisionMethods = new Set(['mutual', 'vote', 'judge'])
 const evidenceTypes = new Set(['text', 'link', 'image', 'file'])
+const voteValues = new Set(['winner', 'abstain'])
 
 export function listTrattos(request, response, next) {
   try {
@@ -109,6 +114,339 @@ export function addEvidence(request, response, next) {
   } catch (error) {
     return next(error)
   }
+}
+
+export function requestJudgment(request, response, next) {
+  try {
+    const tratto = findTrattoById(request.params.id)
+
+    if (!tratto) {
+      throw httpError(404, 'Tratto not found', 'NOT_FOUND')
+    }
+
+    const currentParticipant = findParticipantForUser(tratto, request.user.id)
+    const isCreator = tratto.creator?.id === request.user.id
+    const isAcceptedJudge =
+      currentParticipant?.role === 'judge' && currentParticipant.inviteStatus === 'accepted'
+
+    if (!isCreator && !isAcceptedJudge) {
+      throw httpError(403, 'Only creator or assigned judge can request judgment', 'FORBIDDEN', {
+        actor: 'not_allowed',
+      })
+    }
+
+    if (tratto.status !== 'active') {
+      throw conflictError('Judgment can only be requested for active Trattos', {
+        status: 'invalid_state',
+      })
+    }
+
+    const result = db.transaction(() => {
+      updateTrattoStatus(tratto.id, 'review', { db })
+      const refreshed = findVisibleTrattoById(tratto.id, request.user.id, { db })
+      const notifications = buildJudgmentNotifications(refreshed, request.user, request.body?.reason)
+      createNotifications(notifications, { db })
+      return refreshed
+    })()
+
+    return response.status(200).json({
+      tratto: toTrattoDetailDto(result, request.user.id),
+    })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+export function castVote(request, response, next) {
+  try {
+    const tratto = findTrattoById(request.params.id)
+
+    if (!tratto) {
+      throw httpError(404, 'Tratto not found', 'NOT_FOUND')
+    }
+
+    const currentParticipant = findParticipantForUser(tratto, request.user.id)
+
+    if (
+      !currentParticipant ||
+      currentParticipant.inviteStatus !== 'accepted' ||
+      !['creator', 'participant'].includes(currentParticipant.role)
+    ) {
+      throw httpError(403, 'Only accepted participants can vote', 'FORBIDDEN', {
+        participant: 'required',
+      })
+    }
+
+    if (tratto.decisionMethod !== 'vote') {
+      throw conflictError('Voting is only allowed for vote-based Trattos', {
+        decisionMethod: 'invalid',
+      })
+    }
+
+    if (!['active', 'review'].includes(tratto.status)) {
+      throw conflictError('Voting is only allowed for active or review Trattos', {
+        status: 'invalid_state',
+      })
+    }
+
+    const input = validateVoteInput(request.body, tratto)
+
+    const recorded = upsertVote(
+      {
+        trattoId: tratto.id,
+        voterParticipantId: currentParticipant.id,
+        votedForParticipantId: input.votedForParticipantId,
+        value: input.value,
+        reason: input.reason,
+      },
+      { db },
+    )
+
+    return response.status(recorded.replaced ? 200 : 201).json({
+      vote: {
+        id: recorded.id,
+        value: input.value,
+        votedForParticipantId: input.votedForParticipantId,
+        reason: input.reason,
+      },
+    })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+export function createVerdictRoute(request, response, next) {
+  try {
+    const tratto = findTrattoById(request.params.id)
+
+    if (!tratto) {
+      throw httpError(404, 'Tratto not found', 'NOT_FOUND')
+    }
+
+    if (findVerdictByTrattoId(tratto.id)) {
+      throw conflictError('Verdict already exists for this Tratto', {
+        verdict: 'already_exists',
+      })
+    }
+
+    if (tratto.status !== 'review') {
+      throw conflictError('Verdict can only be created for Trattos under review', {
+        status: 'invalid_state',
+      })
+    }
+
+    const currentParticipant = findParticipantForUser(tratto, request.user.id)
+    const decidedBy = enforceVerdictPermissions(tratto, request.user, currentParticipant)
+    const input = validateVerdictInput(request.body, tratto)
+
+    const result = db.transaction(() => {
+      createVerdictForTratto(
+        {
+          trattoId: tratto.id,
+          decisionMethod: tratto.decisionMethod,
+          decidedByParticipantId: decidedBy.id,
+          winnerParticipantId: input.winnerParticipantId,
+          loserParticipantId: input.loserParticipantId,
+          summary: input.summary,
+        },
+        { db },
+      )
+      updateTrattoStatus(tratto.id, 'compliance', { db })
+      const refreshed = findVisibleTrattoById(tratto.id, request.user.id, { db })
+      const notifications = buildVerdictNotifications(refreshed, request.user)
+      createNotifications(notifications, { db })
+      return refreshed
+    })()
+
+    return response.status(201).json({
+      tratto: toTrattoDetailDto(result, request.user.id),
+    })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+export function completeTratto(request, response, next) {
+  try {
+    const tratto = findTrattoById(request.params.id)
+
+    if (!tratto) {
+      throw httpError(404, 'Tratto not found', 'NOT_FOUND')
+    }
+
+    if (tratto.creator?.id !== request.user.id) {
+      throw httpError(403, 'Only the creator can complete a Tratto', 'FORBIDDEN', {
+        actor: 'not_allowed',
+      })
+    }
+
+    if (tratto.status !== 'compliance') {
+      throw conflictError('Tratto can only be completed from compliance state', {
+        status: 'invalid_state',
+      })
+    }
+
+    const now = new Date().toISOString()
+    const refreshed = db.transaction(() => {
+      updateTrattoStatus(tratto.id, 'finished', { db, now, resolvedAt: now })
+      return findVisibleTrattoById(tratto.id, request.user.id, { db })
+    })()
+
+    return response.status(200).json({
+      tratto: toTrattoDetailDto(refreshed, request.user.id),
+    })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+function findParticipantForUser(tratto, userId) {
+  return tratto.participants.find((participant) => participant.user?.id === userId) ?? null
+}
+
+function validateVoteInput(body, tratto) {
+  const fields = {}
+  const value = normalizeString(body?.value)
+  const votedForParticipantId = normalizeString(body?.votedForParticipantId)
+  const reason = normalizeString(body?.reason) || null
+
+  if (!voteValues.has(value)) {
+    fields.value = 'invalid'
+  }
+
+  if (value === 'winner' && !votedForParticipantId) {
+    fields.votedForParticipantId = 'required'
+  }
+
+  if (votedForParticipantId) {
+    const target = tratto.participants.find((participant) => participant.id === votedForParticipantId)
+
+    if (!target) {
+      fields.votedForParticipantId = 'not_found'
+    } else if (target.role === 'judge') {
+      fields.votedForParticipantId = 'invalid'
+    }
+  }
+
+  if (Object.keys(fields).length > 0) {
+    throw validationError('Invalid vote data', fields)
+  }
+
+  return {
+    value,
+    votedForParticipantId: value === 'winner' ? votedForParticipantId : null,
+    reason,
+  }
+}
+
+function validateVerdictInput(body, tratto) {
+  const fields = {}
+  const winnerParticipantId = normalizeString(body?.winnerParticipantId)
+  const loserParticipantId = normalizeString(body?.loserParticipantId)
+  const summary = normalizeString(body?.summary) || null
+
+  if (!winnerParticipantId) {
+    fields.winnerParticipantId = 'required'
+  }
+
+  if (!loserParticipantId) {
+    fields.loserParticipantId = 'required'
+  }
+
+  if (winnerParticipantId && winnerParticipantId === loserParticipantId) {
+    fields.loserParticipantId = 'must_differ_from_winner'
+  }
+
+  if (Object.keys(fields).length === 0) {
+    for (const [field, id] of [
+      ['winnerParticipantId', winnerParticipantId],
+      ['loserParticipantId', loserParticipantId],
+    ]) {
+      const participant = tratto.participants.find((entry) => entry.id === id)
+
+      if (!participant) {
+        fields[field] = 'not_found'
+      } else if (participant.role === 'judge') {
+        fields[field] = 'invalid'
+      }
+    }
+  }
+
+  if (Object.keys(fields).length > 0) {
+    throw validationError('Invalid verdict data', fields)
+  }
+
+  return { winnerParticipantId, loserParticipantId, summary }
+}
+
+function enforceVerdictPermissions(tratto, currentUser, currentParticipant) {
+  if (tratto.decisionMethod === 'judge') {
+    if (
+      !currentParticipant ||
+      currentParticipant.role !== 'judge' ||
+      currentParticipant.inviteStatus !== 'accepted'
+    ) {
+      throw httpError(403, 'Only the assigned judge can resolve this verdict', 'FORBIDDEN', {
+        actor: 'not_allowed',
+      })
+    }
+
+    return currentParticipant
+  }
+
+  if (tratto.creator?.id !== currentUser.id) {
+    throw httpError(403, 'Only the creator can resolve this verdict', 'FORBIDDEN', {
+      actor: 'not_allowed',
+    })
+  }
+
+  const creatorParticipant = tratto.participants.find((participant) => participant.role === 'creator')
+
+  if (!creatorParticipant) {
+    throw httpError(500, 'Creator participant row missing', 'INTERNAL_ERROR')
+  }
+
+  return creatorParticipant
+}
+
+function buildJudgmentNotifications(tratto, currentUser, reason) {
+  const body = reason
+    ? `${currentUser.displayName} pediu julgamento: ${reason}`
+    : `${currentUser.displayName} solicitou julgamento em "${tratto.title}".`
+
+  return collectNotificationRecipients(tratto, currentUser).map((userId) => ({
+    userId,
+    type: 'verdict',
+    title: 'Julgamento solicitado',
+    body,
+    targetUrl: `/trattos/${tratto.id}`,
+  }))
+}
+
+function buildVerdictNotifications(tratto, currentUser) {
+  return collectNotificationRecipients(tratto, currentUser).map((userId) => ({
+    userId,
+    type: 'verdict',
+    title: 'Veredito registrado',
+    body: `${currentUser.displayName} registrou um veredito em "${tratto.title}".`,
+    targetUrl: `/trattos/${tratto.id}`,
+  }))
+}
+
+function collectNotificationRecipients(tratto, currentUser) {
+  const recipientIds = new Set()
+
+  for (const participant of tratto.participants) {
+    if (
+      participant.user?.id &&
+      participant.user.id !== currentUser.id &&
+      participant.inviteStatus === 'accepted'
+    ) {
+      recipientIds.add(participant.user.id)
+    }
+  }
+
+  return [...recipientIds]
 }
 
 function validateListFilters(query) {

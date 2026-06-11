@@ -486,15 +486,26 @@ Request:
 }
 ```
 
-Response `201`:
+Response `201` (first submission) or `200` (subsequent submission by same voter, upsert):
 
 ```json
 {
   "vote": {
-    "id": "vote-001"
+    "id": "vote-001",
+    "value": "winner",
+    "votedForParticipantId": "trt-0001-julia",
+    "reason": "Prova mais robusta."
   }
 }
 ```
+
+Rules:
+
+- Voter must be an accepted creator/participant of the Tratto.
+- `decisionMethod` must be `vote`.
+- Status must be `active` or `review`.
+- `value` accepts `winner` or `abstain`. `votedForParticipantId` is required when `value` is `winner` and must reference a non-judge participant.
+- A repeated vote by the same voter replaces the previous record and returns `200`.
 
 ### Create Verdict
 
@@ -520,9 +531,12 @@ Response `201`:
 
 Rules:
 
-- Judge method requires assigned judge.
-- Vote method can be resolved by backend after vote threshold or by creator/admin rule if kept manual.
-- Status moves to `compliance` after verdict.
+- Status must be `review`.
+- `decisionMethod` `judge`: only the accepted judge can resolve.
+- `decisionMethod` `vote` or `mutual`: only the creator can resolve (votes are advisory).
+- `winnerParticipantId` and `loserParticipantId` must reference distinct non-judge participants of the Tratto.
+- Each Tratto allows only one verdict. Repeats return `409`.
+- Status moves to `compliance` after verdict and accepted participants receive a `verdict` notification.
 
 ### Complete Tratto
 
@@ -543,6 +557,12 @@ Response `200`:
   "tratto": {}
 }
 ```
+
+Rules:
+
+- Only the creator can complete a Tratto.
+- Status must be `compliance`. Moves to `finished` and records `resolved_at`.
+- `note` field is currently ignored by the backend.
 
 ### List Communities
 

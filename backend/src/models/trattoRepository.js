@@ -192,6 +192,105 @@ export function createEvidenceForTratto(
   }
 }
 
+export function updateTrattoStatus(
+  trattoId,
+  status,
+  { db = defaultDb, now = new Date().toISOString(), resolvedAt = null } = {},
+) {
+  const fields = ['status = ?', 'updated_at = ?']
+  const params = [status, now]
+
+  if (resolvedAt !== null) {
+    fields.push('resolved_at = ?')
+    params.push(resolvedAt)
+  }
+
+  params.push(trattoId)
+  db.prepare(`UPDATE trattos SET ${fields.join(', ')} WHERE id = ?`).run(...params)
+}
+
+export function upsertVote(
+  { trattoId, voterParticipantId, votedForParticipantId, value, reason },
+  { db = defaultDb, now = new Date().toISOString() } = {},
+) {
+  const existing = db
+    .prepare(
+      `SELECT id FROM votes WHERE tratto_id = ? AND voter_participant_id = ?`,
+    )
+    .get(trattoId, voterParticipantId)
+
+  if (existing) {
+    db.prepare(
+      `UPDATE votes
+        SET voted_for_participant_id = ?,
+            value = ?,
+            reason = ?,
+            created_at = ?
+        WHERE id = ?`,
+    ).run(votedForParticipantId, value, reason, now, existing.id)
+
+    return { id: existing.id, replaced: true }
+  }
+
+  const id = randomUUID()
+  db.prepare(
+    `INSERT INTO votes (
+      id,
+      tratto_id,
+      voter_participant_id,
+      voted_for_participant_id,
+      value,
+      reason,
+      created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  ).run(id, trattoId, voterParticipantId, votedForParticipantId, value, reason, now)
+
+  return { id, replaced: false }
+}
+
+export function createVerdictForTratto(
+  { trattoId, decisionMethod, decidedByParticipantId, winnerParticipantId, loserParticipantId, summary },
+  { db = defaultDb, now = new Date().toISOString() } = {},
+) {
+  const id = randomUUID()
+
+  db.prepare(
+    `INSERT INTO tratto_verdicts (
+      id,
+      tratto_id,
+      decision_method,
+      decided_by_participant_id,
+      winner_participant_id,
+      loser_participant_id,
+      summary,
+      created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    id,
+    trattoId,
+    decisionMethod,
+    decidedByParticipantId,
+    winnerParticipantId,
+    loserParticipantId,
+    summary,
+    now,
+  )
+
+  return id
+}
+
+export function findVerdictByTrattoId(trattoId, { db = defaultDb } = {}) {
+  return (
+    db
+      .prepare(
+        `SELECT id, tratto_id, decision_method, summary, winner_participant_id, loser_participant_id, created_at
+        FROM tratto_verdicts
+        WHERE tratto_id = ?`,
+      )
+      .get(trattoId) ?? null
+  )
+}
+
 export function userHasApprovedCommunityMembership(communityId, userId, { db = defaultDb } = {}) {
   return Boolean(
     db
