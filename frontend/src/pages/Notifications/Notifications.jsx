@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 import { Button } from '@components/common/Button'
 import { AppLayout } from '@components/layout/AppLayout'
 import { Panel } from '@components/layout/Panel'
@@ -14,16 +16,43 @@ const notificationTypeLabels = {
 }
 
 export function Notifications() {
+  const [notifications, setNotifications] = useState(mockNotifications)
+  const unreadCount = notifications.filter((notification) => !notification.readAt).length
+
+  function markAsRead(notificationId) {
+    setNotifications((currentNotifications) =>
+      currentNotifications.map((notification) =>
+        notification.id === notificationId
+          ? { ...notification, readAt: notification.readAt ?? 'lido agora' }
+          : notification,
+      ),
+    )
+  }
+
+  function markAllAsRead() {
+    setNotifications((currentNotifications) =>
+      currentNotifications.map((notification) => ({
+        ...notification,
+        readAt: notification.readAt ?? 'lido agora',
+      })),
+    )
+  }
+
   return (
     <AppLayout title="Notificações">
       <PageContainer className="stack stack--large">
         <Panel
+          actions={
+            <Button disabled={!unreadCount} onClick={markAllAsRead} type="button" variant="secondary">
+              Marcar todas como lidas
+            </Button>
+          }
           subtitle="Tudo que exige atenção, constrangimento ou resposta protocolar. Ordenado do mais recente para o menos urgente."
           title="Central de ocorrências"
           titleAs="h1"
         >
           <div className="notification-list">
-            {mockNotifications.map((notification) => (
+            {notifications.map((notification) => (
               <article className="notification-card" data-unread={!notification.readAt} key={notification.id}>
                 <div className="case-card__header">
                   <div className="stack" style={{ gap: 6 }}>
@@ -39,6 +68,11 @@ export function Notifications() {
                   <Button to={notification.targetUrl} variant="secondary">
                     Abrir
                   </Button>
+                  {!notification.readAt ? (
+                    <Button onClick={() => markAsRead(notification.id)} type="button" variant="ghost">
+                      Marcar como lida
+                    </Button>
+                  ) : null}
                   {notification.type === 'invite' ? (
                     <>
                       <Button type="button">Aceitar</Button>
