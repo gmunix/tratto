@@ -67,6 +67,16 @@ export function deleteExpiredAuthTokens(
   return result.changes
 }
 
+export function deleteAuthTokenById(id, { db = defaultDb } = {}) {
+  const result = db.prepare('DELETE FROM auth_tokens WHERE id = ?').run(id)
+
+  return result.changes
+}
+
+export function touchAuthToken(id, { db = defaultDb, now = new Date().toISOString() } = {}) {
+  db.prepare('UPDATE auth_tokens SET last_used_at = ? WHERE id = ?').run(now, id)
+}
+
 function mapAuthToken(row) {
   if (!row) {
     return null
