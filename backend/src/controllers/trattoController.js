@@ -1,4 +1,7 @@
+import fs from 'node:fs'
+
 import { db } from '../database/connection.js'
+import { allowedImageMimes } from '../middlewares/uploadMiddleware.js'
 import { createNotifications } from '../models/notificationRepository.js'
 import { findUserBySlug } from '../models/userRepository.js'
 import {
@@ -27,7 +30,8 @@ const statuses = new Set([
   'compliance',
 ])
 const decisionMethods = new Set(['mutual', 'vote', 'judge'])
-const evidenceTypes = new Set(['text', 'link', 'image', 'file'])
+const jsonEvidenceTypes = new Set(['text', 'link'])
+const uploadEvidenceTypes = new Set(['image', 'file'])
 const voteValues = new Set(['winner', 'abstain'])
 
 export function listTrattos(request, response, next) {
@@ -115,6 +119,80 @@ export function addEvidence(request, response, next) {
     })
   } catch (error) {
     return next(error)
+  }
+}
+
+export function uploadEvidenceRoute(request, response, next) {
+  const uploadedPath = request.file?.path ?? null
+  let consumed = false
+
+  try {
+    if (!request.file) {
+      throw validationError('File is required', { file: 'required' })
+    }
+
+    const type = normalizeString(request.body?.type)
+
+    if (!uploadEvidenceTypes.has(type)) {
+      throw validationError('Invalid evidence type for upload', { type: 'invalid' })
+    }
+
+    if (type === 'image' && !allowedImageMimes.has(request.file.mimetype)) {
+      throw validationError('Mime type does not match declared evidence type', {
+        file: 'unsupported_type',
+      })
+    }
+
+    const tratto = findTrattoById(request.params.id)
+
+    if (!tratto) {
+      throw httpError(404, 'Tratto not found', 'NOT_FOUND')
+    }
+
+    const currentParticipant = findParticipantForUser(tratto, request.user.id)
+    enforceEvidenceRules(tratto, currentParticipant)
+
+    const userCaption = normalizeString(request.body?.caption)
+    const caption = userCaption || request.file.originalname
+    const metadata = {
+      fileUrl: `/uploads/${request.file.filename}`,
+      mimeType: request.file.mimetype,
+      originalName: request.file.originalname,
+      sizeBytes: request.file.size,
+    }
+
+    const result = db.transaction(() => {
+      const created = createEvidenceForTratto(
+        tratto.id,
+        { type, content: caption, metadata },
+        request.user,
+        currentParticipant,
+        { db },
+      )
+      const evidenceNotifications = buildEvidenceNotifications(created.tratto, request.user)
+      const mentionNotifications = userCaption
+        ? buildMentionNotifications(created.tratto, request.user, caption, 'evidence')
+        : []
+      createNotifications([...evidenceNotifications, ...mentionNotifications], { db })
+
+      return created
+    })()
+
+    consumed = true
+    return response.status(201).json({
+      evidence: toEvidenceDto(result.evidence),
+      tratto: toTrattoDetailDto(result.tratto, request.user.id),
+    })
+  } catch (error) {
+    return next(error)
+  } finally {
+    if (!consumed && uploadedPath) {
+      try {
+        fs.unlinkSync(uploadedPath)
+      } catch {
+        // best-effort cleanup; missing file is acceptable
+      }
+    }
   }
 }
 
@@ -575,8 +653,8 @@ function validateEvidenceInput(body) {
   const content = normalizeString(body?.content)
   const metadata = body?.metadata ?? null
 
-  if (!evidenceTypes.has(type)) {
-    fields.type = 'invalid'
+  if (!jsonEvidenceTypes.has(type)) {
+    fields.type = uploadEvidenceTypes.has(type) ? 'use_upload_route' : 'invalid'
   }
 
   if (!content) {
