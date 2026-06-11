@@ -1,18 +1,28 @@
+import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 
-import { mockNotifications } from '@/data/mockTrattos'
-
-const unreadNotifications = mockNotifications.filter((notification) => !notification.readAt).length
-
-const navItems = [
-  { label: 'Painel', path: '/dashboard', Icon: LayoutGridIcon },
-  { label: 'Novo', path: '/novo', Icon: PlusIcon },
-  { label: 'Comunidades', path: '/comunidades', Icon: CommunityIcon },
-  { label: 'Notificações', path: '/notificacoes', Icon: BellIcon, unread: unreadNotifications },
-  { label: 'Ajustes', path: '/ajustes', Icon: SettingsIcon },
-]
+import {
+  getUnreadNotificationCount,
+  subscribeToMockNotificationState,
+} from '@/data/mockNotificationState'
 
 export function AppLayout({ children }) {
+  const [unreadNotifications, setUnreadNotifications] = useState(getUnreadNotificationCount)
+
+  useEffect(() => {
+    return subscribeToMockNotificationState(() => {
+      setUnreadNotifications(getUnreadNotificationCount())
+    })
+  }, [])
+
+  const navItems = [
+    { label: 'Painel', path: '/dashboard', Icon: LayoutGridIcon },
+    { label: 'Novo', path: '/novo', Icon: PlusIcon },
+    { label: 'Comunidades', path: '/comunidades', Icon: CommunityIcon },
+    { label: 'Notificações', path: '/notificacoes', Icon: BellIcon, unread: unreadNotifications },
+    { label: 'Ajustes', path: '/ajustes', Icon: SettingsIcon },
+  ]
+
   return (
     <div className="app-shell">
       <main>{children}</main>
