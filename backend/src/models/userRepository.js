@@ -108,6 +108,31 @@ export function findUserBySlug(slug, { db = defaultDb } = {}) {
   )
 }
 
+export function searchUsersByQuery(query, { db = defaultDb, limit = 20 } = {}) {
+  const trimmed = query.trim()
+  const pattern = `%${trimmed.toLowerCase()}%`
+
+  return db
+    .prepare(
+      `SELECT id, display_name, slug, avatar_url
+      FROM users
+      WHERE LOWER(display_name) LIKE ? OR LOWER(slug) LIKE ?
+      ORDER BY
+        CASE WHEN LOWER(slug) = ? THEN 0
+             WHEN LOWER(slug) LIKE ? THEN 1
+             ELSE 2 END,
+        display_name COLLATE NOCASE ASC
+      LIMIT ?`,
+    )
+    .all(pattern, pattern, trimmed.toLowerCase(), `${trimmed.toLowerCase()}%`, limit)
+    .map((row) => ({
+      id: row.id,
+      displayName: row.display_name,
+      slug: row.slug,
+      avatarUrl: row.avatar_url,
+    }))
+}
+
 export function updateUserProfile(
   userId,
   profile,

@@ -332,20 +332,6 @@ Response `200`:
 }
 ```
 
-### Search Users
-
-`GET /api/users?query=mar`
-
-Response `200`:
-
-```json
-{
-  "users": []
-}
-```
-
-Search matches display name and slug. Use for invites, judges, and mentions.
-
 ### List Trattos
 
 `GET /api/trattos?scope=mine&status=active&communitySlug=republica-404`
@@ -444,7 +430,61 @@ Rules:
 
 - `type` can be `text`, `link`, `image`, or `file` in storage.
 - First implementation may accept only `text` and `link` while returning `400` for upload types until file upload exists.
-- Mention parsing should detect `@slug` in `content`.
+- Mention parsing detects `@slug` in `content` and creates `mention` notifications for accepted participants whose slug matches.
+
+### Add Comment
+
+`POST /api/trattos/:id/comments`
+
+Request:
+
+```json
+{
+  "content": "Concordo com @comment-mentioned, evidências fracas."
+}
+```
+
+Response `201`:
+
+```json
+{
+  "comment": {},
+  "tratto": {}
+}
+```
+
+Rules:
+
+- Only accepted participants (creator, participant, or judge) can comment.
+- Allowed when status is `active`, `review`, or `compliance`. Returns `409` otherwise.
+- `content` is required, max 2000 characters.
+- Mention parsing detects `@slug` and emits `mention` notifications for matching accepted participants.
+- Other accepted participants receive an activity notification with type `evidence`.
+
+### Search Users
+
+`GET /api/users?query=mar`
+
+Response `200`:
+
+```json
+{
+  "users": [
+    {
+      "id": "usr-marcos",
+      "displayName": "Marcos Ferreira",
+      "slug": "marcosf",
+      "avatarUrl": null
+    }
+  ]
+}
+```
+
+Rules:
+
+- Returns empty list when `query` is shorter than 2 characters.
+- Matches against `slug` and `displayName` case-insensitively, ranks exact-slug match first.
+- Capped at 20 results.
 
 ### Request Judgment
 
