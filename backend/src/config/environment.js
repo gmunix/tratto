@@ -1,11 +1,16 @@
 import 'dotenv/config'
 
 export const defaultAuthTokenTtlDays = 7
+export const maxAuthTokenTtlDays = 365
 
 export function parseAuthTokenTtlDays(value) {
   const ttlDays = Number(value)
 
-  if (!Number.isFinite(ttlDays) || ttlDays <= 0) {
+  if (
+    !Number.isSafeInteger(ttlDays) ||
+    ttlDays <= 0 ||
+    ttlDays > maxAuthTokenTtlDays
+  ) {
     return defaultAuthTokenTtlDays
   }
 

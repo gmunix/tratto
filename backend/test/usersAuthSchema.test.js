@@ -3,6 +3,7 @@ import test from 'node:test'
 
 import {
   defaultAuthTokenTtlDays,
+  maxAuthTokenTtlDays,
   parseAuthTokenTtlDays,
 } from '../src/config/environment.js'
 import {
@@ -268,6 +269,39 @@ test('auth token TTL parsing falls back to a safe default for invalid values', (
   assert.equal(parseAuthTokenTtlDays('0'), defaultAuthTokenTtlDays)
   assert.equal(parseAuthTokenTtlDays('-1'), defaultAuthTokenTtlDays)
   assert.equal(parseAuthTokenTtlDays('Infinity'), defaultAuthTokenTtlDays)
-  assert.equal(parseAuthTokenTtlDays('0.5'), 0.5)
+  assert.equal(parseAuthTokenTtlDays('0.5'), defaultAuthTokenTtlDays)
+  assert.equal(parseAuthTokenTtlDays('1e100'), defaultAuthTokenTtlDays)
+  assert.equal(parseAuthTokenTtlDays('9007199254740992'), defaultAuthTokenTtlDays)
+  assert.equal(parseAuthTokenTtlDays(String(maxAuthTokenTtlDays + 1)), defaultAuthTokenTtlDays)
   assert.equal(parseAuthTokenTtlDays('14'), 14)
+  assert.equal(parseAuthTokenTtlDays(String(maxAuthTokenTtlDays)), maxAuthTokenTtlDays)
+})
+
+test('auth token creation falls back when passed an unsafe TTL', () => {
+  const testDatabase = migrateTestDatabase()
+
+  try {
+    const db = openWritableTestDatabase(testDatabase.path)
+    insertTestUser(db)
+
+    assert.doesNotThrow(() =>
+      createAuthToken('usr-test', {
+        db,
+        id: 'tok-unsafe-ttl',
+        token: 'unsafe-ttl-token',
+        now: new Date('2026-06-01T12:00:00.000Z'),
+        ttlDays: 1e100,
+      }),
+    )
+
+    const stored = db
+      .prepare('SELECT expires_at FROM auth_tokens WHERE id = ?')
+      .get('tok-unsafe-ttl')
+
+    assert.equal(stored.expires_at, '2026-06-08T12:00:00.000Z')
+
+    db.close()
+  } finally {
+    testDatabase.cleanup()
+  }
 })

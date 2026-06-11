@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import { environment } from '../config/environment.js'
+import { environment, parseAuthTokenTtlDays } from '../config/environment.js'
 import { db as defaultDb } from '../database/connection.js'
 import { generateToken, hashToken } from '../services/tokenService.js'
 
@@ -14,9 +14,10 @@ export function createAuthToken(
     ttlDays = environment.authTokenTtlDays,
   } = {},
 ) {
+  const safeTtlDays = parseAuthTokenTtlDays(ttlDays)
   const createdAt = now.toISOString()
   const expiresAt = new Date(
-    now.getTime() + ttlDays * 24 * 60 * 60 * 1000,
+    now.getTime() + safeTtlDays * 24 * 60 * 60 * 1000,
   ).toISOString()
   const tokenHash = hashToken(token)
 
