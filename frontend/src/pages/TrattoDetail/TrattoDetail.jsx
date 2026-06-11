@@ -15,6 +15,8 @@ import {
   getParticipantNames,
   getTrattoById,
 } from '@/data/mockTrattos'
+import { addEvidence, getTratto } from '@/services/backend'
+import { getSession } from '@/services/session'
 
 const evidenceTypeLabels = {
   text: 'Texto',
@@ -24,7 +26,9 @@ const evidenceTypeLabels = {
 
 export function TrattoDetail() {
   const { trattoId } = useParams()
-  const tratto = getTrattoById(trattoId)
+  const fallbackTratto = getTrattoById(trattoId)
+  const [apiTratto, setApiTratto] = useState(null)
+  const tratto = apiTratto ?? fallbackTratto
   const [evidenceType, setEvidenceType] = useState('text')
   const [evidenceText, setEvidenceText] = useState('')
   const [evidencePhoto, setEvidencePhoto] = useState(null)
@@ -34,6 +38,16 @@ export function TrattoDetail() {
   const evidencePhotoInputRef = useRef(null)
   const evidenceFeedbackTimeoutRef = useRef(null)
   const localEvidenceCounterRef = useRef(0)
+
+  useEffect(() => {
+    if (!getSession().token) {
+      return
+    }
+
+    getTratto(trattoId)
+      .then(setApiTratto)
+      .catch(() => setApiTratto(null))
+  }, [trattoId])
 
   useEffect(() => {
     return () => window.clearTimeout(evidenceFeedbackTimeoutRef.current)
@@ -49,16 +63,38 @@ export function TrattoDetail() {
     )
   }
 
-  const allEvidence = [...tratto.evidence, ...localEvidence]
+  const allEvidence = [...(tratto.evidence ?? []), ...localEvidence]
   const isOpen = ['active', 'review'].includes(tratto.status)
   const isClosed = ['finished', 'loser-detected', 'cancelled'].includes(tratto.status)
-  const canRequestJudgment =
-    tratto.creatorId === currentUser.id || tratto.judgeUserId === currentUser.id
+  const canRequestJudgment = tratto.permissions?.canRequestJudgment ??
+    (tratto.creatorId === currentUser.id || tratto.judgeUserId === currentUser.id)
 
-  function submitEvidence(event) {
+  async function submitEvidence(event) {
     event.preventDefault()
 
     if (!evidenceText.trim() && !(evidenceType === 'image' && evidencePhoto)) {
+      return
+    }
+
+    if (getSession().token) {
+      const data = await addEvidence(tratto.id, {
+        type: evidenceType,
+        content: evidenceText.trim() || evidencePhoto?.filename || 'Imagem anexada para perícia social.',
+        metadata: evidenceType === 'image' && evidencePhoto
+          ? { filename: evidencePhoto.filename, previewUrl: evidencePhoto.previewUrl }
+          : undefined,
+      })
+
+      setApiTratto(data.tratto)
+      setEvidenceText('')
+      clearEvidencePhoto()
+      setEvidenceFeedback('Evidência protocolada na API.')
+      setSubmittedEvidenceId(data.evidence.id)
+      window.clearTimeout(evidenceFeedbackTimeoutRef.current)
+      evidenceFeedbackTimeoutRef.current = window.setTimeout(() => {
+        setEvidenceFeedback('')
+        setSubmittedEvidenceId('')
+      }, 2200)
       return
     }
 
@@ -160,7 +196,7 @@ export function TrattoDetail() {
                     >
                       <div className="timeline-item__header">
                         <div>
-                          <p className="section-title">{evidence.author}</p>
+                          <p className="section-title">{evidence.authorName ?? evidence.author?.displayName ?? evidence.author}</p>
                           <p className="muted-label">{evidence.createdAt}</p>
                         </div>
                         <span className="status-badge" data-status="finished">
@@ -276,7 +312,7 @@ export function TrattoDetail() {
           <Panel bodyClassName="stack" title="Regras">
               <ol className="rules-list">
                 {tratto.rules.map((rule) => (
-                  <li key={rule}>{rule}</li>
+                  <li key={typeof rule === 'string' ? rule : rule.id}>{typeof rule === 'string' ? rule : rule.text}</li>
                 ))}
               </ol>
           </Panel>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { Button } from '@components/common/Button'
@@ -7,6 +7,8 @@ import { AppLayout } from '@components/layout/AppLayout'
 import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
 import { decisionMethodLabels, getCommunityBySlugOrId, trattoCategories } from '@/data/mockTrattos'
+import { createTratto, getCommunity } from '@/services/backend'
+import { getSession } from '@/services/session'
 
 const initialForm = {
   title: '',
@@ -27,10 +29,26 @@ function createProtocol() {
 
 export function CreateTratto() {
   const [searchParams] = useSearchParams()
-  const selectedCommunity = getCommunityBySlugOrId(searchParams.get('community'))
+  const fallbackCommunity = getCommunityBySlugOrId(searchParams.get('community'))
   const [form, setForm] = useState(initialForm)
   const [submitted, setSubmitted] = useState(false)
   const [protocol, setProtocol] = useState(createProtocol)
+  const [createdTratto, setCreatedTratto] = useState(null)
+  const [apiCommunity, setApiCommunity] = useState(null)
+  const [error, setError] = useState('')
+  const selectedCommunity = apiCommunity ?? fallbackCommunity
+
+  useEffect(() => {
+    const community = searchParams.get('community')
+
+    if (!community || !getSession().token) {
+      return
+    }
+
+    getCommunity(community)
+      .then((data) => setApiCommunity(data.community))
+      .catch(() => setApiCommunity(null))
+  }, [searchParams])
 
   const hasRequiredJudge = form.decisionMethod !== 'judge' || Boolean(form.judge.trim())
   const canSubmit = Boolean(
@@ -86,10 +104,36 @@ export function CreateTratto() {
     }))
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
 
     if (canSubmit) {
+      setError('')
+
+      if (getSession().token) {
+        try {
+          const tratto = await createTratto({
+            title: form.title,
+            description: form.description,
+            category: form.category,
+            consequence: form.consequence,
+            deadline: form.deadline,
+            decisionMethod: form.decisionMethod,
+            participantSlugs: form.participants.map(normalizeSlugInput),
+            judgeSlug: form.decisionMethod === 'judge' ? normalizeSlugInput(form.judge) : undefined,
+            communitySlug: selectedCommunity?.slug,
+            rules: form.rules.filter((rule) => rule.trim()),
+          })
+          setCreatedTratto(tratto)
+          setProtocol(tratto.caseNumber)
+          setSubmitted(true)
+          return
+        } catch (apiError) {
+          setError(apiError.response?.data?.message ?? 'A API recusou o protocolo. Revise slugs e regras.')
+          return
+        }
+      }
+
       setProtocol(createProtocol())
       setSubmitted(true)
     }
@@ -110,7 +154,7 @@ export function CreateTratto() {
             title={`Protocolo ${protocol}`}
             titleAs="p"
           >
-            <h1 className="case-card__title">{form.title}</h1>
+            <h1 className="case-card__title">{createdTratto?.title ?? form.title}</h1>
 
             <p className="notice">
               Estimativa oficial: dano à amizade moderado. Valor jurídico:
@@ -322,10 +366,15 @@ export function CreateTratto() {
             <Button disabled={!canSubmit} fullWidth type="submit">
               Registrar trato
             </Button>
+            {error ? <p className="pixel-feedback">{error}</p> : null}
         </Panel>
       </PageContainer>
     </AppLayout>
   )
+}
+
+function normalizeSlugInput(value) {
+  return value.trim().replace(/^@/, '').toLowerCase()
 }
 
 function getDecisionDescription(method) {
