@@ -111,7 +111,7 @@ test('GET /api/trattos/:id returns rules and permissions', async () => {
   assert.deepEqual(response.body.tratto.permissions, {
     canEdit: false,
     canAddEvidence: true,
-    canRequestJudgment: true,
+    canRequestJudgment: false,
     canVote: true,
     canResolveVerdict: false,
     canComplete: false,
