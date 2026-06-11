@@ -129,7 +129,8 @@ function buildPermissions(tratto, currentUserId) {
   const isAcceptedParticipant = currentParticipant?.inviteStatus === 'accepted'
   const isJudge = currentParticipant?.role === 'judge' && isAcceptedParticipant
   const participantCanAct = isAcceptedParticipant && ['creator', 'participant'].includes(currentParticipant.role)
-  const canRequestJudgment = (participantCanAct || isJudge) && tratto.status === 'active'
+  const isAcceptedCreator = isCreator && (!currentParticipant || isAcceptedParticipant)
+  const canRequestJudgment = (isAcceptedCreator || isJudge) && tratto.status === 'active'
 
   const canResolveVerdict =
     tratto.status === 'review' &&

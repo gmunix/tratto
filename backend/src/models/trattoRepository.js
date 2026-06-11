@@ -213,39 +213,39 @@ export function upsertVote(
   { trattoId, voterParticipantId, votedForParticipantId, value, reason },
   { db = defaultDb, now = new Date().toISOString() } = {},
 ) {
-  const existing = db
-    .prepare(
-      `SELECT id FROM votes WHERE tratto_id = ? AND voter_participant_id = ?`,
-    )
-    .get(trattoId, voterParticipantId)
+  return db.transaction(() => {
+    const existing = db
+      .prepare(`SELECT id FROM votes WHERE tratto_id = ? AND voter_participant_id = ?`)
+      .get(trattoId, voterParticipantId)
 
-  if (existing) {
+    if (existing) {
+      db.prepare(
+        `UPDATE votes
+          SET voted_for_participant_id = ?,
+              value = ?,
+              reason = ?,
+              created_at = ?
+          WHERE id = ?`,
+      ).run(votedForParticipantId, value, reason, now, existing.id)
+
+      return { id: existing.id, replaced: true }
+    }
+
+    const id = randomUUID()
     db.prepare(
-      `UPDATE votes
-        SET voted_for_participant_id = ?,
-            value = ?,
-            reason = ?,
-            created_at = ?
-        WHERE id = ?`,
-    ).run(votedForParticipantId, value, reason, now, existing.id)
+      `INSERT INTO votes (
+        id,
+        tratto_id,
+        voter_participant_id,
+        voted_for_participant_id,
+        value,
+        reason,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).run(id, trattoId, voterParticipantId, votedForParticipantId, value, reason, now)
 
-    return { id: existing.id, replaced: true }
-  }
-
-  const id = randomUUID()
-  db.prepare(
-    `INSERT INTO votes (
-      id,
-      tratto_id,
-      voter_participant_id,
-      voted_for_participant_id,
-      value,
-      reason,
-      created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  ).run(id, trattoId, voterParticipantId, votedForParticipantId, value, reason, now)
-
-  return { id, replaced: false }
+    return { id, replaced: false }
+  })()
 }
 
 export function createVerdictForTratto(

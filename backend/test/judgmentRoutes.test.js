@@ -101,6 +101,28 @@ test('POST /api/trattos/:id/request-judgment rejects unrelated users and invalid
     .expect(404)
 })
 
+test('POST /api/trattos/:id/request-judgment rejects regular accepted participants', async () => {
+  const creator = await registerUser({ email: 'rj-regular-creator@example.com', slug: 'rj-regular-creator', displayName: 'RJ Regular Creator' })
+  const participant = await registerUser({ email: 'rj-regular-participant@example.com', slug: 'rj-regular-participant', displayName: 'RJ Regular Participant' })
+
+  await insertTratto({ id: 'trt-rj-regular', creatorId: creator.user.id, status: 'active', decisionMethod: 'vote' })
+  await insertParticipant({ id: 'trt-rj-regular-creator', trattoId: 'trt-rj-regular', user: creator.user, role: 'creator' })
+  await insertParticipant({ id: 'trt-rj-regular-participant', trattoId: 'trt-rj-regular', user: participant.user, role: 'participant' })
+
+  const detail = await request(app)
+    .get('/api/trattos/trt-rj-regular')
+    .set('Authorization', `Bearer ${participant.token}`)
+    .expect(200)
+
+  assert.equal(detail.body.tratto.permissions.canRequestJudgment, false)
+
+  await request(app)
+    .post('/api/trattos/trt-rj-regular/request-judgment')
+    .set('Authorization', `Bearer ${participant.token}`)
+    .send({})
+    .expect(403)
+})
+
 test('POST /api/trattos/:id/votes stores a vote and upserts on second submission', async () => {
   const creator = await registerUser({ email: 'vote-creator@example.com', slug: 'vote-creator', displayName: 'Vote Creator' })
   const opponent = await registerUser({ email: 'vote-opponent@example.com', slug: 'vote-opponent', displayName: 'Vote Opponent' })
