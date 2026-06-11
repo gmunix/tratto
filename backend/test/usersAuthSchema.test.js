@@ -229,6 +229,47 @@ test('seed data includes stable users and hashed development passwords', async (
   }
 })
 
+test('seed data includes public and private communities with memberships', () => {
+  const testDatabase = createTestDatabase()
+
+  try {
+    runBackendScript('resetDatabase.js', testDatabase.path)
+
+    const db = openTestDatabase(testDatabase.path)
+    const communityCount = db
+      .prepare('SELECT COUNT(*) AS count FROM communities')
+      .get()
+    const privateCommunity = db
+      .prepare(
+        `SELECT c.slug, c.privacy, membership.role, membership.status
+        FROM communities c
+        INNER JOIN community_memberships membership
+          ON membership.community_id = c.id
+        WHERE c.slug = ? AND membership.user_id = ?`,
+      )
+      .get('republica-404', 'usr-marcos')
+    const publicCommunity = db
+      .prepare('SELECT slug, privacy FROM communities WHERE slug = ?')
+      .get('desafios-de-domingo')
+
+    db.close()
+
+    assert.equal(communityCount.count, 3)
+    assert.deepEqual(privateCommunity, {
+      slug: 'republica-404',
+      privacy: 'private',
+      role: 'creator',
+      status: 'member',
+    })
+    assert.deepEqual(publicCommunity, {
+      slug: 'desafios-de-domingo',
+      privacy: 'public',
+    })
+  } finally {
+    testDatabase.cleanup()
+  }
+})
+
 test('password hashing stores verifiable hashes instead of plain passwords', async () => {
   const passwordHash = await hashPassword('Senha123!')
 
