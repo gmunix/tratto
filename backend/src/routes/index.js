@@ -6,6 +6,7 @@ import { healthRoutes } from './healthRoutes.js'
 import { meRoutes } from './meRoutes.js'
 import { notificationRoutes } from './notificationRoutes.js'
 import { trattoRoutes } from './trattoRoutes.js'
+import { userRoutes } from './userRoutes.js'
 
 export const routes = Router()
 
@@ -15,3 +16,4 @@ routes.use('/health', healthRoutes)
 routes.use('/me', meRoutes)
 routes.use('/notifications', notificationRoutes)
 routes.use('/trattos', trattoRoutes)
+routes.use('/users', userRoutes)

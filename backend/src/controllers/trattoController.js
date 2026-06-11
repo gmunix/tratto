@@ -2,6 +2,7 @@ import { db } from '../database/connection.js'
 import { createNotifications } from '../models/notificationRepository.js'
 import { findUserBySlug } from '../models/userRepository.js'
 import {
+  createCommentForTratto,
   createEvidenceForTratto,
   createTratto,
   createVerdictForTratto,
@@ -14,7 +15,7 @@ import {
   userHasApprovedCommunityMembership,
 } from '../models/trattoRepository.js'
 import { conflictError, httpError, validationError } from '../utils/httpErrors.js'
-import { toEvidenceDto, toTrattoDetailDto, toTrattoSummaryDto } from '../utils/trattoDto.js'
+import { toCommentDto, toEvidenceDto, toTrattoDetailDto, toTrattoSummaryDto } from '../utils/trattoDto.js'
 
 const statuses = new Set([
   'pending',
@@ -96,19 +97,50 @@ export function addEvidence(request, response, next) {
       throw httpError(404, 'Tratto not found', 'NOT_FOUND')
     }
 
-    const currentParticipant = findEvidenceParticipant(tratto, request.user.id)
+    const currentParticipant = findParticipantForUser(tratto, request.user.id)
     enforceEvidenceRules(tratto, currentParticipant)
 
     const result = db.transaction(() => {
       const created = createEvidenceForTratto(tratto.id, input, request.user, currentParticipant, { db })
-      const notifications = buildEvidenceNotifications(created.tratto, request.user)
-      createNotifications(notifications, { db })
+      const evidenceNotifications = buildEvidenceNotifications(created.tratto, request.user)
+      const mentionNotifications = buildMentionNotifications(created.tratto, request.user, input.content, 'evidence')
+      createNotifications([...evidenceNotifications, ...mentionNotifications], { db })
 
       return created
     })()
 
     return response.status(201).json({
       evidence: toEvidenceDto(result.evidence),
+      tratto: toTrattoDetailDto(result.tratto, request.user.id),
+    })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+export function addComment(request, response, next) {
+  try {
+    const input = validateCommentInput(request.body)
+    const tratto = findTrattoById(request.params.id)
+
+    if (!tratto) {
+      throw httpError(404, 'Tratto not found', 'NOT_FOUND')
+    }
+
+    const currentParticipant = findParticipantForUser(tratto, request.user.id)
+    enforceCommentRules(tratto, currentParticipant)
+
+    const result = db.transaction(() => {
+      const created = createCommentForTratto(tratto.id, input, request.user, currentParticipant, { db })
+      const commentNotifications = buildCommentNotifications(created.tratto, request.user)
+      const mentionNotifications = buildMentionNotifications(created.tratto, request.user, input.content, 'mention')
+      createNotifications([...commentNotifications, ...mentionNotifications], { db })
+
+      return created
+    })()
+
+    return response.status(201).json({
+      comment: toCommentDto(result.comment),
       tratto: toTrattoDetailDto(result.tratto, request.user.id),
     })
   } catch (error) {
@@ -562,10 +594,6 @@ function validateEvidenceInput(body) {
   return { type, content, metadata }
 }
 
-function findEvidenceParticipant(tratto, userId) {
-  return tratto.participants.find((participant) => participant.user?.id === userId) ?? null
-}
-
 function enforceEvidenceRules(tratto, currentParticipant) {
   if (!['active', 'review'].includes(tratto.status)) {
     throw conflictError('Evidence can only be added to active or review Trattos', {
@@ -604,6 +632,92 @@ function buildEvidenceNotifications(tratto, currentUser) {
     body: `${currentUser.displayName} adicionou uma evidência em "${tratto.title}".`,
     targetUrl: `/trattos/${tratto.id}`,
   }))
+}
+
+function validateCommentInput(body) {
+  const fields = {}
+  const content = normalizeString(body?.content)
+
+  if (!content) {
+    fields.content = 'required'
+  } else if (content.length > 2000) {
+    fields.content = 'too_long'
+  }
+
+  if (Object.keys(fields).length > 0) {
+    throw validationError('Invalid comment data', fields)
+  }
+
+  return { content }
+}
+
+function enforceCommentRules(tratto, currentParticipant) {
+  if (!['active', 'review', 'compliance'].includes(tratto.status)) {
+    throw conflictError('Comments are only allowed on open Trattos', {
+      status: 'invalid_state',
+    })
+  }
+
+  if (!currentParticipant || currentParticipant.inviteStatus !== 'accepted') {
+    throw httpError(403, 'Only accepted participants can comment', 'FORBIDDEN', {
+      participant: 'required',
+    })
+  }
+}
+
+function buildCommentNotifications(tratto, currentUser) {
+  return collectNotificationRecipients(tratto, currentUser).map((userId) => ({
+    userId,
+    type: 'evidence',
+    title: 'Novo comentário no Tratto',
+    body: `${currentUser.displayName} comentou em "${tratto.title}".`,
+    targetUrl: `/trattos/${tratto.id}`,
+  }))
+}
+
+function buildMentionNotifications(tratto, currentUser, content, contextType) {
+  const slugs = parseMentionSlugs(content)
+
+  if (slugs.length === 0) {
+    return []
+  }
+
+  const recipientIds = new Set()
+
+  for (const slug of slugs) {
+    const participant = tratto.participants.find(
+      (entry) => entry.user?.slug?.toLowerCase() === slug.toLowerCase(),
+    )
+
+    if (participant?.user?.id && participant.user.id !== currentUser.id) {
+      recipientIds.add(participant.user.id)
+    }
+  }
+
+  if (recipientIds.size === 0) {
+    return []
+  }
+
+  const title = contextType === 'evidence' ? 'Você foi mencionado em uma evidência' : 'Você foi mencionado em um comentário'
+
+  return [...recipientIds].map((userId) => ({
+    userId,
+    type: 'mention',
+    title,
+    body: `${currentUser.displayName} mencionou você em "${tratto.title}".`,
+    targetUrl: `/trattos/${tratto.id}`,
+  }))
+}
+
+function parseMentionSlugs(content) {
+  const matches = content.match(/@([a-z0-9-]{3,64})/gi) ?? []
+  const slugs = new Set()
+
+  for (const raw of matches) {
+    slugs.add(raw.slice(1).toLowerCase())
+  }
+
+  return [...slugs]
 }
 
 function resolveUsers(slugs, fieldName) {

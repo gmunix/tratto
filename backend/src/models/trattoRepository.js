@@ -192,6 +192,43 @@ export function createEvidenceForTratto(
   }
 }
 
+export function createCommentForTratto(
+  trattoId,
+  input,
+  currentUser,
+  currentParticipant,
+  { db = defaultDb, now = new Date().toISOString() } = {},
+) {
+  const id = randomUUID()
+
+  db.prepare(
+    `INSERT INTO comments (
+      id,
+      tratto_id,
+      author_participant_id,
+      author_display_name,
+      content,
+      author_user_id,
+      created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    id,
+    trattoId,
+    currentParticipant?.id ?? null,
+    currentUser.displayName,
+    input.content,
+    currentUser.id,
+    now,
+  )
+
+  const tratto = findVisibleTrattoById(trattoId, currentUser.id, { db })
+
+  return {
+    comment: tratto.comments.find((item) => item.id === id),
+    tratto,
+  }
+}
+
 export function updateTrattoStatus(
   trattoId,
   status,

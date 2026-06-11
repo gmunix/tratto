@@ -85,7 +85,7 @@ export function toEvidenceDto(evidence) {
   }
 }
 
-function toCommentDto(comment) {
+export function toCommentDto(comment) {
   return {
     id: comment.id,
     author: toPublicUserDto(comment.author),
