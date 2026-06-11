@@ -1,12 +1,16 @@
 import {
   createCommunityWithCreatorMembership,
+  decidePendingMembership,
   findCommunityBySlugForUser,
+  findMembershipById,
+  joinCommunity as joinCommunityMembership,
   listMembersForCommunity,
+  listPendingRequestsForCommunity,
   listUserCommunities,
   listVisibleCommunitiesForUser,
 } from '../models/communityRepository.js'
 import { conflictError, httpError, validationError } from '../utils/httpErrors.js'
-import { toCommunityDto } from '../utils/communityDto.js'
+import { toCommunityDto, toFullCommunityMembershipDto } from '../utils/communityDto.js'
 
 export function listCommunities(request, response, next) {
   try {
@@ -41,16 +45,41 @@ export function getCommunity(request, response, next) {
     }
 
     const members = listMembersForCommunity(community.id)
+    const pendingRequests = canManageCommunity(community)
+      ? listPendingRequestsForCommunity(community.id)
+      : []
 
     return response.status(200).json({
       community: toCommunityDto(community),
       members,
       trattos: [],
-      pendingRequests: [],
+      pendingRequests,
     })
   } catch (error) {
     return next(error)
   }
+}
+
+export function joinCommunity(request, response, next) {
+  try {
+    const community = findCommunityForAction(request.params.slug, request.user.id)
+    const membership = joinCommunityMembership(community, request.user.id)
+    const status = membership.status === 'pending' ? 202 : 200
+
+    return response.status(status).json({
+      membership: toFullCommunityMembershipDto(membership),
+    })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+export function approveCommunityRequest(request, response, next) {
+  return decideCommunityRequest(request, response, next, 'member')
+}
+
+export function denyCommunityRequest(request, response, next) {
+  return decideCommunityRequest(request, response, next, 'denied')
 }
 
 function validateCommunityInput(body) {
@@ -97,6 +126,51 @@ function canViewCommunity(community) {
   }
 
   return community.currentUserMembership?.status === 'member'
+}
+
+function decideCommunityRequest(request, response, next, decisionStatus) {
+  try {
+    const community = findCommunityForAction(request.params.slug, request.user.id)
+
+    if (!canManageCommunity(community)) {
+      throw httpError(403, 'Only community creators and admins can manage requests', 'FORBIDDEN')
+    }
+
+    const membership = findMembershipById(request.params.requestId)
+
+    if (!membership || membership.communityId !== community.id) {
+      throw httpError(404, 'Community request not found', 'NOT_FOUND')
+    }
+
+    if (membership.status !== 'pending') {
+      throw conflictError('Community request is not pending', { status: 'not_pending' })
+    }
+
+    const decidedMembership = decidePendingMembership(membership.id, decisionStatus)
+
+    return response.status(200).json({
+      membership: toFullCommunityMembershipDto(decidedMembership),
+    })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+function findCommunityForAction(slugParam, userId) {
+  const slug = normalizeString(slugParam).toLowerCase()
+  const community = findCommunityBySlugForUser(slug, userId)
+
+  if (!community) {
+    throw httpError(404, 'Community not found', 'NOT_FOUND')
+  }
+
+  return community
+}
+
+function canManageCommunity(community) {
+  const membership = community.currentUserMembership
+
+  return membership?.status === 'member' && ['creator', 'admin'].includes(membership.role)
 }
 
 function isUniqueConstraintError(error, field) {

@@ -174,6 +174,105 @@ export function listMembersForCommunity(communityId, { db = defaultDb } = {}) {
     .map(mapMembershipWithUser)
 }
 
+export function listPendingRequestsForCommunity(communityId, { db = defaultDb } = {}) {
+  return db
+    .prepare(
+      `SELECT
+        membership.id,
+        membership.community_id,
+        membership.user_id,
+        membership.role,
+        membership.status,
+        membership.requested_at,
+        membership.decided_at,
+        membership.created_at,
+        membership.updated_at,
+        users.display_name,
+        users.slug,
+        users.avatar_url
+      FROM community_memberships membership
+      INNER JOIN users ON users.id = membership.user_id
+      WHERE membership.community_id = ?
+        AND membership.status = 'pending'
+      ORDER BY membership.requested_at ASC, users.display_name ASC`,
+    )
+    .all(communityId)
+    .map(mapMembershipWithUser)
+}
+
+export function joinCommunity(community, userId, { db = defaultDb, id = randomUUID(), now = new Date().toISOString() } = {}) {
+  const desiredStatus = community.privacy === 'public' ? 'member' : 'pending'
+  const existingMembership = findMembershipByCommunityAndUser(community.id, userId, { db })
+
+  if (existingMembership?.status === 'member') {
+    return existingMembership
+  }
+
+  if (existingMembership) {
+    db.prepare(
+      `UPDATE community_memberships
+      SET role = 'member',
+        status = ?,
+        requested_at = ?,
+        decided_at = NULL,
+        updated_at = ?
+      WHERE id = ?`,
+    ).run(desiredStatus, now, now, existingMembership.id)
+
+    return findMembershipById(existingMembership.id, { db })
+  }
+
+  db.prepare(
+    `INSERT INTO community_memberships (
+      id,
+      community_id,
+      user_id,
+      role,
+      status,
+      requested_at,
+      decided_at,
+      created_at,
+      updated_at
+    ) VALUES (?, ?, ?, 'member', ?, ?, NULL, ?, ?)`,
+  ).run(id, community.id, userId, desiredStatus, now, now, now)
+
+  return findMembershipById(id, { db })
+}
+
+export function findMembershipById(membershipId, { db = defaultDb } = {}) {
+  return mapMembership(
+    db
+      .prepare(
+        `SELECT
+          id,
+          community_id,
+          user_id,
+          role,
+          status,
+          requested_at,
+          decided_at,
+          created_at,
+          updated_at
+        FROM community_memberships
+        WHERE id = ?`,
+      )
+      .get(membershipId),
+  )
+}
+
+export function decidePendingMembership(membershipId, status, { db = defaultDb, now = new Date().toISOString() } = {}) {
+  db.prepare(
+    `UPDATE community_memberships
+    SET status = ?,
+      decided_at = ?,
+      updated_at = ?
+    WHERE id = ?
+      AND status = 'pending'`,
+  ).run(status, now, now, membershipId)
+
+  return findMembershipById(membershipId, { db })
+}
+
 export function createCommunityWithCreatorMembership(
   community,
   creatorId,
@@ -220,6 +319,28 @@ export function createCommunityWithCreatorMembership(
   create()
 
   return findCommunityBySlugForUser(community.slug, creatorId, { db })
+}
+
+function findMembershipByCommunityAndUser(communityId, userId, { db = defaultDb } = {}) {
+  return mapMembership(
+    db
+      .prepare(
+        `SELECT
+          id,
+          community_id,
+          user_id,
+          role,
+          status,
+          requested_at,
+          decided_at,
+          created_at,
+          updated_at
+        FROM community_memberships
+        WHERE community_id = ?
+          AND user_id = ?`,
+      )
+      .get(communityId, userId),
+  )
 }
 
 function mapCommunityWithMembership(row) {
@@ -279,6 +400,24 @@ function mapMembershipWithUser(row) {
       slug: row.slug,
       avatarUrl: row.avatar_url,
     },
+  }
+}
+
+function mapMembership(row) {
+  if (!row) {
+    return null
+  }
+
+  return {
+    id: row.id,
+    communityId: row.community_id,
+    userId: row.user_id,
+    role: row.role,
+    status: row.status,
+    requestedAt: row.requested_at,
+    decidedAt: row.decided_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   }
 }
 
