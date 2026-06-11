@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 
 import { ProgressBar } from '@components/common/ProgressBar'
 import { StatusBadge } from '@components/common/StatusBadge'
-import { decisionMethodLabels } from '@/data/mockTrattos'
+import { decisionMethodLabels, getParticipantNames } from '@/data/mockTrattos'
 
 export function TrattoCard({ tratto, dimmed = false }) {
   return (
@@ -24,7 +24,7 @@ export function TrattoCard({ tratto, dimmed = false }) {
       <p className="case-card__description">{tratto.description}</p>
 
       <div className="case-card__meta">
-        <span>{tratto.participants.join(' contra ')}</span>
+        <span>{getParticipantNames(tratto).join(' contra ')}</span>
         <span>{decisionMethodLabels[tratto.decisionMethod]}</span>
       </div>
 

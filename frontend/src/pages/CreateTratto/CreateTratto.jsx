@@ -1,19 +1,20 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 import { Button } from '@components/common/Button'
 import { Field } from '@components/common/Field'
 import { AppLayout } from '@components/layout/AppLayout'
 import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
-import { decisionMethodLabels, trattoCategories } from '@/data/mockTrattos'
+import { decisionMethodLabels, getCommunityBySlugOrId, trattoCategories } from '@/data/mockTrattos'
 
 const initialForm = {
   title: '',
   description: '',
-  category: trattoCategories[0],
+  category: trattoCategories[0].name,
   participantName: '',
   participants: [],
-  rules: '',
+  rules: [''],
   deadline: '',
   consequence: '',
   decisionMethod: 'mutual',
@@ -25,6 +26,8 @@ function createProtocol() {
 }
 
 export function CreateTratto() {
+  const [searchParams] = useSearchParams()
+  const selectedCommunity = getCommunityBySlugOrId(searchParams.get('community'))
   const [form, setForm] = useState(initialForm)
   const [submitted, setSubmitted] = useState(false)
   const [protocol, setProtocol] = useState(createProtocol)
@@ -34,9 +37,11 @@ export function CreateTratto() {
     form.title &&
       form.deadline &&
       form.consequence &&
+      form.rules.some((rule) => rule.trim()) &&
       form.participants.length > 0 &&
       hasRequiredJudge,
   )
+  const selectedCategory = trattoCategories.find((category) => category.name === form.category)
 
   function updateField(field, value) {
     setForm((currentForm) => ({ ...currentForm, [field]: value }))
@@ -63,6 +68,24 @@ export function CreateTratto() {
     }))
   }
 
+  function updateRule(index, value) {
+    setForm((currentForm) => ({
+      ...currentForm,
+      rules: currentForm.rules.map((rule, ruleIndex) => (ruleIndex === index ? value : rule)),
+    }))
+  }
+
+  function addRule() {
+    setForm((currentForm) => ({ ...currentForm, rules: [...currentForm.rules, ''] }))
+  }
+
+  function removeRule(index) {
+    setForm((currentForm) => ({
+      ...currentForm,
+      rules: currentForm.rules.filter((_, ruleIndex) => ruleIndex !== index),
+    }))
+  }
+
   function handleSubmit(event) {
     event.preventDefault()
 
@@ -75,11 +98,15 @@ export function CreateTratto() {
   if (submitted) {
     return (
       <AppLayout backTo="/dashboard" title="Trato registrado">
-        <PageContainer>
+        <PageContainer className="page-container--center">
           <Panel
             bodyClassName="stack stack--large"
             className="panel--narrow"
-            subtitle="O trato foi enviado ao cartório social. Participantes serão notificados assim que o backend existir."
+            subtitle={
+              selectedCommunity
+                ? `O trato foi vinculado à comunidade /${selectedCommunity.slug}. Participantes serão notificados assim que o backend existir.`
+                : 'O trato foi enviado ao cartório social. Participantes serão notificados assim que o backend existir.'
+            }
             title={`Protocolo ${protocol}`}
             titleAs="p"
           >
@@ -90,9 +117,15 @@ export function CreateTratto() {
               nenhum. Valor no grupo: altíssimo.
             </p>
 
+            {selectedCommunity ? (
+              <p className="notice">
+                Comunidade vinculada: {selectedCommunity.name}. O futuro payload usaria communityId {selectedCommunity.id}.
+              </p>
+            ) : null}
+
             <div className="button-row button-row--stack-mobile">
-              <Button to="/dashboard">
-                Voltar ao painel
+              <Button to={selectedCommunity ? `/comunidades/${selectedCommunity.slug}` : '/dashboard'}>
+                {selectedCommunity ? 'Voltar à comunidade' : 'Voltar ao painel'}
               </Button>
               <Button
                 onClick={() => {
@@ -114,7 +147,7 @@ export function CreateTratto() {
 
   return (
     <AppLayout backTo="/dashboard" title="Registrar novo trato">
-      <PageContainer>
+      <PageContainer className="page-container--center">
         <Panel
           as="form"
           bodyClassName="form-grid"
@@ -124,6 +157,12 @@ export function CreateTratto() {
           title="Formulário TRT-A1"
           titleAs="h1"
         >
+            {selectedCommunity ? (
+              <div className="notice">
+                Comunidade selecionada: {selectedCommunity.name} /{selectedCommunity.slug}. Este trato mockado será criado com communityId {selectedCommunity.id}.
+              </div>
+            ) : null}
+
             <Field htmlFor="tratto-category" label="Categoria">
               <select
                 className="select"
@@ -132,11 +171,12 @@ export function CreateTratto() {
                 value={form.category}
               >
                 {trattoCategories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
+                  <option key={category.id} value={category.name}>
+                    {category.name}
                   </option>
                 ))}
               </select>
+              <p className="field__hint">{selectedCategory?.description}</p>
             </Field>
 
             <Field htmlFor="tratto-title" hint="Obrigatório" label="Título do caso">
@@ -195,14 +235,31 @@ export function CreateTratto() {
               </div>
             </Field>
 
-            <Field htmlFor="tratto-rules" label="Regras combinadas">
-              <textarea
-                className="textarea"
-                id="tratto-rules"
-                onChange={(event) => updateField('rules', event.target.value)}
-                placeholder="Liste regras objetivas. Ambiguidade alimenta recurso."
-                value={form.rules}
-              />
+            <Field label="Regras combinadas">
+              <div className="rule-list">
+                {form.rules.map((rule, index) => (
+                  <div className="rule-row" key={`rule-${index + 1}`}>
+                    <span className="rule-row__number">{index + 1}</span>
+                    <input
+                      className="input"
+                      onChange={(event) => updateRule(index, event.target.value)}
+                      placeholder="Regra objetiva, sem brecha para recurso emocional"
+                      value={rule}
+                    />
+                    <Button
+                      disabled={form.rules.length === 1}
+                      onClick={() => removeRule(index)}
+                      type="button"
+                      variant="ghost"
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                ))}
+                <Button onClick={addRule} type="button" variant="secondary">
+                  Adicionar regra
+                </Button>
+              </div>
             </Field>
 
             <Field htmlFor="tratto-deadline" hint="Obrigatório" label="Prazo final">

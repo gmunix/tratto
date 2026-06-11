@@ -15,23 +15,102 @@ export const decisionMethodLabels = {
 }
 
 export const trattoCategories = [
-  'Desafio gastronômico',
-  'Condicionamento',
-  'Fiscalização cultural',
-  'Desafio técnico',
-  'Saúde e hábitos',
-  'Habilidades duvidosas',
-  'Outro',
+  {
+    id: 'food',
+    name: 'Desafio gastronômico',
+    description: 'Para bravatas alimentares, promessas de sobremesa e perícias calóricas.',
+  },
+  {
+    id: 'fitness',
+    name: 'Condicionamento',
+    description: 'Metas físicas com prazo, testemunhas e baixo índice de desculpas aceitas.',
+  },
+  {
+    id: 'culture',
+    name: 'Fiscalização cultural',
+    description: 'Quando alguém jurou conhecer uma obra e agora precisa sustentar a versão.',
+  },
+  {
+    id: 'tech',
+    name: 'Desafio técnico',
+    description: 'Promessas de entrega, código, gambiarra ou façanhas digitais auditáveis.',
+  },
+  {
+    id: 'habits',
+    name: 'Saúde e hábitos',
+    description: 'Rotinas pessoais fiscalizadas sem transformar amizade em planilha hostil.',
+  },
+  {
+    id: 'skills',
+    name: 'Habilidades duvidosas',
+    description: 'Talentos declarados em voz alta que agora exigem demonstração pública.',
+  },
+  {
+    id: 'other',
+    name: 'Outro',
+    description: 'Casos especiais demais para a burocracia prever sem pedir reforço.',
+  },
 ]
 
 export const currentUser = {
   id: 'usr-0042',
   name: 'Marcos Ferreira',
+  slug: 'marcosf',
   username: '@marcosf',
+  avatarUrl: '',
+  theme: 'grime',
   initials: 'MF',
   reputation: 78,
   joinedAt: '2026-03-04',
 }
+
+export const mockUsers = [
+  currentUser,
+  { id: 'usr-0101', name: 'Julia Souza', slug: 'julias', avatarUrl: '', theme: 'cassete' },
+  { id: 'usr-0102', name: 'Lara Costa', slug: 'larac', avatarUrl: '', theme: 'grime' },
+  { id: 'usr-0103', name: 'Lucas Dias', slug: 'lucasd', avatarUrl: '', theme: 'cassete' },
+  { id: 'usr-0104', name: 'Beto Alves', slug: 'betoa', avatarUrl: '', theme: 'grime' },
+]
+
+export const mockCommunities = [
+  {
+    id: 'com-001',
+    name: 'República 404',
+    slug: 'republica-404',
+    privacy: 'private',
+    creatorId: currentUser.id,
+    memberCount: 7,
+    description: 'Moradores, agregados e visitantes sob auditoria de tarefas domésticas.',
+    members: [
+      { userId: currentUser.id, role: 'creator', status: 'member' },
+      { userId: 'usr-0102', role: 'admin', status: 'member' },
+      { userId: 'usr-0103', role: 'member', status: 'member' },
+    ],
+  },
+  {
+    id: 'com-002',
+    name: 'Clube do Sofá Atleta',
+    slug: 'sofa-atleta',
+    privacy: 'public',
+    creatorId: 'usr-0101',
+    memberCount: 18,
+    description: 'Promessas fitness feitas entre uma batata frita e outra.',
+    members: [
+      { userId: 'usr-0101', role: 'creator', status: 'member' },
+      { userId: currentUser.id, role: 'member', status: 'member' },
+    ],
+  },
+  {
+    id: 'com-003',
+    name: 'Cine Conselho',
+    slug: 'cine-conselho',
+    privacy: 'public',
+    creatorId: 'usr-0104',
+    memberCount: 31,
+    description: 'Julgamento popular de repertório cultural com ata e pipoca.',
+    members: [{ userId: 'usr-0104', role: 'creator', status: 'member' }],
+  },
+]
 
 export const mockTrattos = [
   {
@@ -41,15 +120,25 @@ export const mockTrattos = [
     description:
       'Marcos declarou capacidade plena em reunião familiar. Julia contestou a alegação como estatisticamente improvável e socialmente perigosa.',
     category: 'Desafio gastronômico',
-    participants: ['Marcos Ferreira', 'Julia Souza'],
+    creatorId: currentUser.id,
+    communityId: null,
+    participants: [
+      { userId: currentUser.id, displayName: 'Marcos Ferreira', role: 'creator', inviteStatus: 'accepted' },
+      { userId: 'usr-0101', displayName: 'Julia Souza', role: 'participant', inviteStatus: 'accepted' },
+    ],
     status: 'active',
     consequence: 'Quem perder compra café para a outra pessoa por uma semana.',
-    rules:
-      '1. Os pães de queijo precisam ser de tamanho normal.\n2. Não vale intervalo maior que dois minutos.\n3. As duas partes precisam estar presentes.\n4. Miniaturas não serão aceitas como prova.',
+    rules: [
+      'Os pães de queijo precisam ser de tamanho normal.',
+      'Não vale intervalo maior que dois minutos.',
+      'As duas partes precisam estar presentes.',
+      'Miniaturas não serão aceitas como prova.',
+    ],
     deadline: '2026-06-15',
     createdAt: '2026-05-01',
     decisionMethod: 'vote',
     judge: '',
+    judgeUserId: null,
     progress: 42,
     evidence: [
       {
@@ -83,15 +172,25 @@ export const mockTrattos = [
     description:
       'Três amigos registraram o objetivo. Até o momento, a maior movimentação foi comprar tênis novo.',
     category: 'Condicionamento',
-    participants: ['Carlos Reis', 'Ana Paula', 'Pedro Martins'],
+    creatorId: 'usr-0101',
+    communityId: 'com-002',
+    participants: [
+      { userId: 'usr-0101', displayName: 'Carlos Reis', role: 'creator', inviteStatus: 'accepted' },
+      { userId: currentUser.id, displayName: 'Marcos Ferreira', role: 'participant', inviteStatus: 'pending' },
+      { userId: 'usr-0103', displayName: 'Pedro Martins', role: 'participant', inviteStatus: 'pending' },
+    ],
     status: 'pending',
     consequence: 'O último a bater a meta paga um almoço coletivo.',
-    rules:
-      '1. O tempo precisa vir de aplicativo de corrida.\n2. Percurso sem descida absurda.\n3. A prova deve ser enviada em até dez minutos.',
+    rules: [
+      'O tempo precisa vir de aplicativo de corrida.',
+      'Percurso sem descida absurda.',
+      'A prova deve ser enviada em até dez minutos.',
+    ],
     deadline: '2026-07-01',
     createdAt: '2026-05-15',
     decisionMethod: 'mutual',
     judge: '',
+    judgeUserId: null,
     progress: 0,
     evidence: [],
     comments: [],
@@ -103,15 +202,24 @@ export const mockTrattos = [
     description:
       'Rafa afirmou dominar todos os filmes importantes. Em interrogatório informal, admitiu lacuna grave no repertório.',
     category: 'Fiscalização cultural',
-    participants: ['Rafa Brito', 'Beto Alves'],
+    creatorId: 'usr-0104',
+    communityId: 'com-003',
+    participants: [
+      { userId: 'usr-0104', displayName: 'Beto Alves', role: 'judge', inviteStatus: 'accepted' },
+      { userId: null, displayName: 'Rafa Brito', role: 'participant', inviteStatus: 'accepted' },
+    ],
     status: 'loser-detected',
     consequence: 'Publicar pedido de desculpas cultural no grupo da família.',
-    rules:
-      '1. Assistir ao filme inteiro, sem pular cenas.\n2. Enviar três comentários durante a sessão.\n3. Aceitar julgamento público por 48 horas.',
+    rules: [
+      'Assistir ao filme inteiro, sem pular cenas.',
+      'Enviar três comentários durante a sessão.',
+      'Aceitar julgamento público por 48 horas.',
+    ],
     deadline: '2026-05-01',
     createdAt: '2026-04-01',
     decisionMethod: 'mutual',
     judge: 'Beto Alves',
+    judgeUserId: 'usr-0104',
     progress: 100,
     evidence: [
       {
@@ -138,15 +246,25 @@ export const mockTrattos = [
     description:
       'Lucas disse que faria sem biblioteca, sem drama e sem pedir ajuda. Lara classificou a fala como tecnicamente audaciosa.',
     category: 'Desafio técnico',
-    participants: ['Lucas Dias', 'Lara Costa'],
+    creatorId: 'usr-0103',
+    communityId: 'com-001',
+    participants: [
+      { userId: 'usr-0103', displayName: 'Lucas Dias', role: 'creator', inviteStatus: 'accepted' },
+      { userId: 'usr-0102', displayName: 'Lara Costa', role: 'judge', inviteStatus: 'accepted' },
+      { userId: currentUser.id, displayName: 'Marcos Ferreira', role: 'judge', inviteStatus: 'accepted' },
+    ],
     status: 'review',
     consequence: 'Duas rodadas de bebida gelada em sábado ensolarado.',
-    rules:
-      '1. Somente HTML, CSS e JavaScript.\n2. O cronômetro começa com o editor aberto.\n3. Precisa ter movimento, comida, pontuação e fim de jogo.',
+    rules: [
+      'Somente HTML, CSS e JavaScript.',
+      'O cronômetro começa com o editor aberto.',
+      'Precisa ter movimento, comida, pontuação e fim de jogo.',
+    ],
     deadline: '2026-05-20',
     createdAt: '2026-05-05',
     decisionMethod: 'judge',
     judge: 'Lara Costa',
+    judgeUserId: 'usr-0102',
     progress: 80,
     evidence: [
       {
@@ -159,8 +277,9 @@ export const mockTrattos = [
       {
         id: 'ev-006',
         author: 'Lara Costa',
-        type: 'text',
-        content: 'Funciona, mas a colisão atravessou a parede uma vez. Veredito pendente.',
+        type: 'image',
+        content: 'Captura da parede atravessada anexada para perícia pixelada.',
+        metadata: { filename: 'bug-parede.png' },
         createdAt: '2026-05-19 09:00',
       },
     ],
@@ -173,15 +292,25 @@ export const mockTrattos = [
     description:
       'Clara lançou o desafio. Diego aceitou dizendo que seria fácil. O dia 3 demonstrou complexidade operacional.',
     category: 'Saúde e hábitos',
-    participants: ['Clara Mendes', 'Diego Freitas'],
+    creatorId: 'usr-0101',
+    communityId: null,
+    participants: [
+      { userId: 'usr-0101', displayName: 'Clara Mendes', role: 'creator', inviteStatus: 'accepted' },
+      { userId: null, displayName: 'Diego Freitas', role: 'participant', inviteStatus: 'accepted' },
+    ],
     status: 'finished',
     consequence: 'Jantar escolhido pela vencedora, pago pelo perdedor.',
-    rules:
-      '1. Sem açúcar adicionado.\n2. Frutas liberadas.\n3. Diário alimentar obrigatório.\n4. Fiscalizações por chamada podem ocorrer.',
+    rules: [
+      'Sem açúcar adicionado.',
+      'Frutas liberadas.',
+      'Diário alimentar obrigatório.',
+      'Fiscalizações por chamada podem ocorrer.',
+    ],
     deadline: '2026-04-30',
     createdAt: '2026-03-31',
     decisionMethod: 'mutual',
     judge: '',
+    judgeUserId: null,
     progress: 100,
     evidence: [
       {
@@ -203,20 +332,51 @@ export const mockTrattos = [
   },
 ]
 
-export const pendingInvites = [
+export const mockNotifications = [
   {
-    id: 'inv-001',
-    from: 'Thiago Klein',
-    title: 'Nomear todas as capitais da América do Sul sem consultar nada',
-    consequence: 'Jantar pago por quem errar primeiro.',
-    deadline: '2026-06-20',
+    id: 'ntf-001',
+    type: 'invite',
+    title: 'Convite para trato recebido',
+    body: 'Thiago quer registrar capitais da América do Sul sem consulta externa.',
+    readAt: null,
+    targetUrl: '/trattos/trt-0002',
+    createdAt: '2026-06-10 08:12',
   },
   {
-    id: 'inv-002',
-    from: 'Fernanda Lima',
-    title: 'Acordar às 6h por duas semanas consecutivas',
-    consequence: 'Um mês lavando a louça da república.',
-    deadline: '2026-06-10',
+    id: 'ntf-002',
+    type: 'evidence',
+    title: 'Nova evidência anexada',
+    body: 'Lara adicionou uma captura de tela no caso da cobrinha.',
+    readAt: null,
+    targetUrl: '/trattos/trt-0004',
+    createdAt: '2026-06-09 21:44',
+  },
+  {
+    id: 'ntf-003',
+    type: 'community-request',
+    title: 'Pedido para entrar na República 404',
+    body: '@nanda-lima solicita acesso ao cartório doméstico.',
+    readAt: null,
+    targetUrl: '/comunidades/republica-404',
+    createdAt: '2026-06-09 19:10',
+  },
+  {
+    id: 'ntf-004',
+    type: 'mention',
+    title: 'Você foi mencionado em evidência',
+    body: '@marcosf foi citado como testemunha de respiração pesada.',
+    readAt: '2026-06-08 12:00',
+    targetUrl: '/trattos/trt-0001',
+    createdAt: '2026-06-08 11:30',
+  },
+  {
+    id: 'ntf-005',
+    type: 'verdict',
+    title: 'Veredito registrado',
+    body: 'O caso do açúcar processado foi arquivado com dignidade aceitável.',
+    readAt: '2026-06-07 10:20',
+    targetUrl: '/trattos/trt-0005',
+    createdAt: '2026-06-07 09:40',
   },
 ]
 
@@ -253,4 +413,32 @@ export const userProfile = {
 
 export function getTrattoById(trattoId) {
   return mockTrattos.find((tratto) => tratto.id === trattoId)
+}
+
+export function getCommunityBySlug(communitySlug) {
+  return mockCommunities.find((community) => community.slug === communitySlug)
+}
+
+export function getCommunityBySlugOrId(communitySlugOrId) {
+  return mockCommunities.find(
+    (community) => community.slug === communitySlugOrId || community.id === communitySlugOrId,
+  )
+}
+
+export function getUserById(userId) {
+  return mockUsers.find((user) => user.id === userId)
+}
+
+export function getParticipantNames(tratto) {
+  return tratto.participants.map((participant) => participant.displayName)
+}
+
+export function getCommunityTrattos(communityId) {
+  return mockTrattos.filter((tratto) => tratto.communityId === communityId)
+}
+
+export function getActiveCommunityTrattoCount(communityId) {
+  return getCommunityTrattos(communityId).filter((tratto) =>
+    ['active', 'review', 'compliance'].includes(tratto.status),
+  ).length
 }

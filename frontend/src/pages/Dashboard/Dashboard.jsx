@@ -5,7 +5,7 @@ import { AppLayout } from '@components/layout/AppLayout'
 import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
 import { TrattoCard } from '@components/features/trattos/TrattoCard'
-import { mockTrattos, pendingInvites } from '@/data/mockTrattos'
+import { mockNotifications, mockTrattos, userProfile } from '@/data/mockTrattos'
 
 export function Dashboard() {
   const activeTrattos = mockTrattos.filter((tratto) => tratto.status === 'active')
@@ -14,6 +14,7 @@ export function Dashboard() {
   const closedTrattos = mockTrattos.filter((tratto) =>
     ['finished', 'loser-detected', 'cancelled'].includes(tratto.status),
   )
+  const notificationsPreview = mockNotifications.slice(0, 3)
 
   return (
     <AppLayout
@@ -26,10 +27,10 @@ export function Dashboard() {
     >
       <PageContainer className="stack stack--large">
         <section className="stats-grid">
-          <StatCard label="Ativos" value={activeTrattos.length} />
-          <StatCard label="Pendentes" value={pendingTrattos.length + pendingInvites.length} />
-          <StatCard label="Em julgamento" value={reviewTrattos.length} />
-          <StatCard label="Arquivados" value={closedTrattos.length} />
+          <StatCard label="Vitórias" tone="success" value={userProfile.wins} />
+          <StatCard label="Derrotas" tone="danger" value={userProfile.losses} />
+          <StatCard label="Ativos" tone="accent" value={activeTrattos.length} />
+          <StatCard label="Pendências" tone="warning" value={pendingTrattos.length + reviewTrattos.length} />
         </section>
 
         <section className="page-grid">
@@ -51,16 +52,18 @@ export function Dashboard() {
 
             <Panel
               subtitle="Há evidências suficientes para alguém perder a pose."
-              title="Aguardando decisão"
+              title="Em julgamento"
             >
               <div className="stack">
-                {reviewTrattos.map((tratto) => (
-                  <TrattoCard key={tratto.id} tratto={tratto} />
-                ))}
+                {reviewTrattos.length ? (
+                  reviewTrattos.map((tratto) => <TrattoCard key={tratto.id} tratto={tratto} />)
+                ) : (
+                  <EmptyState>Nenhum processo esperando martelo oficial.</EmptyState>
+                )}
               </div>
             </Panel>
 
-            <Panel subtitle="Material arquivado para constrangimentos futuros." title="Histórico recente">
+            <Panel subtitle="Material arquivado para constrangimentos futuros." title="Histórico">
               <div className="stack">
                 {closedTrattos.map((tratto) => (
                   <TrattoCard dimmed key={tratto.id} tratto={tratto} />
@@ -70,36 +73,15 @@ export function Dashboard() {
           </div>
 
           <aside className="stack stack--large">
-            <Panel title="Convites pendentes">
+            <Panel actions={<Button to="/notificacoes" variant="ghost">Ver todas</Button>} title="Notificações">
               <div className="stack">
-                {pendingInvites.map((invite) => (
-                  <article className="invite-card" key={invite.id}>
-                    <div className="stack" style={{ gap: 6 }}>
-                      <span className="muted-label">Enviado por {invite.from}</span>
-                      <h3 className="case-card__title">{invite.title}</h3>
-                    </div>
-                    <p className="case-card__description">Consequência: {invite.consequence}</p>
-                    <div className="invite-card__footer">
-                      <span className="muted-label">Prazo {invite.deadline}</span>
-                      <div className="button-row button-row--stack-mobile">
-                        <Button type="button">
-                          Aceitar
-                        </Button>
-                        <Button type="button" variant="ghost">
-                          Recusar
-                        </Button>
-                      </div>
-                    </div>
+                {notificationsPreview.map((notification) => (
+                  <article className="notification-card" data-unread={!notification.readAt} key={notification.id}>
+                    <span className="muted-label">{notification.type}</span>
+                    <h3 className="case-card__title">{notification.title}</h3>
+                    <p className="case-card__description">{notification.body}</p>
                   </article>
                 ))}
-              </div>
-            </Panel>
-
-            <Panel title="Checklist burocrático">
-              <div className="stack">
-                <p className="notice">1. Defina regras antes da coragem acabar.</p>
-                <p className="notice">2. Colete evidências antes da memória virar opinião.</p>
-                <p className="notice">3. Emita veredito com firmeza e pouca base legal.</p>
               </div>
             </Panel>
           </aside>
