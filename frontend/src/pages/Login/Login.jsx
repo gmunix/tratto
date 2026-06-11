@@ -35,7 +35,7 @@ export function Login() {
           <Link className="brand-mark" to="/">
             TRATTO
           </Link>
-          <span className="muted-label">Acesso mockado</span>
+          <span className="muted-label">Acesso ao cartório</span>
         </div>
       </header>
 
@@ -45,7 +45,7 @@ export function Login() {
           bodyClassName="form-grid"
           className="login-panel"
           onSubmit={handleSubmit}
-          subtitle="Use o usuário seedado para testar o backend real. Depois trocamos por cadastro completo."
+          subtitle="Use seu e-mail e senha para acessar o cartório social."
           title="Entrar no cartório"
           titleAs="h1"
         >
@@ -73,9 +73,6 @@ export function Login() {
               />
             </Field>
 
-            <p className="notice">
-              Usuário seedado: marcos@example.com / Senha123!. O token fica salvo localmente para ligar as telas à API.
-            </p>
             {error ? <p className="pixel-feedback">{error}</p> : null}
 
             <Button disabled={isSubmitting} fullWidth type="submit">

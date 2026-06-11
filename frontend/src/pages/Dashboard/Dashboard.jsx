@@ -15,7 +15,6 @@ export function Dashboard() {
   const [trattos, setTrattos] = useState(mockTrattos)
   const [notifications, setNotifications] = useState(mockNotifications)
   const [stats, setStats] = useState(null)
-  const [source, setSource] = useState('mock')
 
   useEffect(() => {
     if (!getSession().token) {
@@ -27,9 +26,8 @@ export function Dashboard() {
         setTrattos(data.trattos)
         setNotifications(data.notifications)
         setStats(data.stats)
-        setSource('api')
       })
-      .catch(() => setSource('mock'))
+      .catch(() => {})
   }, [])
 
   const activeTrattos = trattos.filter((tratto) => tratto.status === 'active')
@@ -50,7 +48,6 @@ export function Dashboard() {
       title="Painel de controle"
     >
       <PageContainer className="stack stack--large">
-        {source === 'api' ? <p className="pixel-feedback">Dados sincronizados com a API.</p> : null}
         <section className="stats-grid">
           <StatCard label="Vitórias" tone="success" value={stats?.wins ?? userProfile.wins} />
           <StatCard label="Derrotas" tone="danger" value={stats?.losses ?? userProfile.losses} />
@@ -60,6 +57,21 @@ export function Dashboard() {
 
         <section className="page-grid">
           <div className="stack stack--large">
+            <Panel
+              subtitle="Aguardando aceitação dos convidados ou seu próprio aceite."
+              title="Pendentes"
+            >
+              {pendingTrattos.length ? (
+                <div className="stack">
+                  {pendingTrattos.map((tratto) => (
+                    <TrattoCard key={tratto.id} tratto={tratto} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState>Nenhum convite aguardando resposta.</EmptyState>
+              )}
+            </Panel>
+
             <Panel
               subtitle="Tratos com prazo correndo e potencial real de constrangimento."
               title="Casos ativos"

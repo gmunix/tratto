@@ -10,6 +10,7 @@ import {
   getTratto,
   listTrattos,
   requestJudgment,
+  respondToInvite,
   uploadEvidenceRoute,
 } from '../controllers/trattoController.js'
 import { requireAuth } from '../middlewares/authMiddleware.js'
@@ -28,6 +29,7 @@ trattoRoutes.post(
   uploadEvidenceRoute,
 )
 trattoRoutes.post('/:id/comments', addComment)
+trattoRoutes.post('/:id/participants/:participantId/respond', respondToInvite)
 trattoRoutes.post('/:id/request-judgment', requestJudgment)
 trattoRoutes.post('/:id/votes', castVote)
 trattoRoutes.post('/:id/verdict', createVerdictRoute)
