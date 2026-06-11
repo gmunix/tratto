@@ -108,6 +108,34 @@ export function findUserBySlug(slug, { db = defaultDb } = {}) {
   )
 }
 
+export function updateUserProfile(
+  userId,
+  profile,
+  { db = defaultDb, now = new Date().toISOString() } = {},
+) {
+  db.prepare(
+    `UPDATE users
+    SET display_name = ?, slug = ?, avatar_url = ?, updated_at = ?
+    WHERE id = ?`,
+  ).run(profile.displayName, profile.slug, profile.avatarUrl, now, userId)
+
+  return findUserById(userId, { db })
+}
+
+export function updateUserTheme(
+  userId,
+  theme,
+  { db = defaultDb, now = new Date().toISOString() } = {},
+) {
+  db.prepare(
+    `UPDATE users
+    SET theme = ?, updated_at = ?
+    WHERE id = ?`,
+  ).run(theme, now, userId)
+
+  return findUserById(userId, { db })
+}
+
 function mapUser(row) {
   if (!row) {
     return null
