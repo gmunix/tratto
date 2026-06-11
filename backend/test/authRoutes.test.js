@@ -68,7 +68,24 @@ test('POST /api/auth/login rejects wrong passwords', async () => {
     .send({ email: 'wrong-password@example.com', password: 'Senha1234!' })
     .expect(401)
 
-  assert.equal(response.body.code, 'AUTHENTICATION_REQUIRED')
+  assert.deepEqual(response.body, {
+    message: 'Invalid email or password',
+    code: 'AUTHENTICATION_REQUIRED',
+  })
+})
+
+test('POST /api/auth/login rejects nonexistent email without creating a token', async () => {
+  const tokenCountBefore = countAuthTokens()
+  const response = await request(app)
+    .post('/api/auth/login')
+    .send({ email: 'missing-login@example.com', password: 'Senha123!' })
+    .expect(401)
+
+  assert.deepEqual(response.body, {
+    message: 'Invalid email or password',
+    code: 'AUTHENTICATION_REQUIRED',
+  })
+  assert.equal(countAuthTokens(), tokenCountBefore)
 })
 
 test('auth routes reject duplicate email and slug', async () => {
@@ -99,6 +116,60 @@ test('auth routes reject duplicate email and slug', async () => {
 
   assert.equal(duplicateEmail.body.fields.email, 'already_in_use')
   assert.equal(duplicateSlug.body.fields.slug, 'already_in_use')
+})
+
+test('register translates database email conflicts into 409 responses', async () => {
+  db.prepare(
+    `CREATE TEMP TRIGGER auth_test_email_conflict
+    BEFORE INSERT ON users
+    WHEN NEW.email = 'race-email@example.com'
+    BEGIN
+      SELECT RAISE(ABORT, 'UNIQUE constraint failed: users.email');
+    END`,
+  ).run()
+
+  try {
+    const response = await request(app)
+      .post('/api/auth/register')
+      .send({
+        email: 'race-email@example.com',
+        password: 'Senha123!',
+        displayName: 'Race Email',
+        slug: 'race-email-user',
+      })
+      .expect(409)
+
+    assert.equal(response.body.fields.email, 'already_in_use')
+  } finally {
+    db.prepare('DROP TRIGGER auth_test_email_conflict').run()
+  }
+})
+
+test('register translates database slug conflicts into 409 responses', async () => {
+  db.prepare(
+    `CREATE TEMP TRIGGER auth_test_slug_conflict
+    BEFORE INSERT ON users
+    WHEN NEW.slug = 'race-slug-user'
+    BEGIN
+      SELECT RAISE(ABORT, 'UNIQUE constraint failed: users.slug');
+    END`,
+  ).run()
+
+  try {
+    const response = await request(app)
+      .post('/api/auth/register')
+      .send({
+        email: 'race-slug@example.com',
+        password: 'Senha123!',
+        displayName: 'Race Slug',
+        slug: 'race-slug-user',
+      })
+      .expect(409)
+
+    assert.equal(response.body.fields.slug, 'already_in_use')
+  } finally {
+    db.prepare('DROP TRIGGER auth_test_slug_conflict').run()
+  }
 })
 
 test('GET /api/auth/me returns the current user for a valid token', async () => {
@@ -190,4 +261,8 @@ async function registerUser(overrides = {}) {
     .expect(201)
 
   return response.body
+}
+
+function countAuthTokens() {
+  return db.prepare('SELECT COUNT(*) AS count FROM auth_tokens').get().count
 }

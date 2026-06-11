@@ -4,6 +4,8 @@ import { hashPassword, verifyPassword } from '../services/passwordService.js'
 import { authError, conflictError, validationError } from '../utils/httpErrors.js'
 import { toUserDto } from '../utils/userDto.js'
 
+const dummyPasswordHash = `scrypt:16384:8:1:00:${'0'.repeat(128)}`
+
 export async function register(request, response, next) {
   try {
     const input = validateRegister(request.body)
@@ -17,7 +19,7 @@ export async function register(request, response, next) {
     }
 
     const passwordHash = await hashPassword(input.password)
-    const user = createUser({ ...input, passwordHash })
+    const user = createUserHandlingConflicts({ ...input, passwordHash })
     const { token } = createAuthToken(user.id)
 
     return response.status(201).json({ token, user: toUserDto(user) })
@@ -30,8 +32,10 @@ export async function login(request, response, next) {
   try {
     const input = validateLogin(request.body)
     const user = findUserByEmail(input.email)
+    const passwordHash = user?.passwordHash ?? dummyPasswordHash
+    const passwordMatches = await verifyPassword(input.password, passwordHash)
 
-    if (!user || !(await verifyPassword(input.password, user.passwordHash))) {
+    if (!user || !passwordMatches) {
       throw authError('Invalid email or password')
     }
 
@@ -81,6 +85,29 @@ function validateRegister(body) {
   }
 
   return { email, password, displayName, slug }
+}
+
+function createUserHandlingConflicts(user) {
+  try {
+    return createUser(user)
+  } catch (error) {
+    if (isUniqueConstraintError(error, 'email')) {
+      throw conflictError('Email already in use', { email: 'already_in_use' })
+    }
+
+    if (isUniqueConstraintError(error, 'slug')) {
+      throw conflictError('Slug already in use', { slug: 'already_in_use' })
+    }
+
+    throw error
+  }
+}
+
+function isUniqueConstraintError(error, field) {
+  return (
+    error?.code === 'SQLITE_CONSTRAINT_UNIQUE' &&
+    error.message.includes(`users.${field}`)
+  ) || error?.message?.includes(`UNIQUE constraint failed: users.${field}`)
 }
 
 function validateLogin(body) {
