@@ -50,7 +50,6 @@ export function Communities() {
           title="Buscar comunidade"
           titleAs="h1"
         >
-          {source === 'api' ? <p className="pixel-feedback">Busca conectada à API.</p> : null}
           <input
             className="input"
             onChange={(event) => setQuery(event.target.value)}

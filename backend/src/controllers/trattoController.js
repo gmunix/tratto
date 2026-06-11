@@ -5,6 +5,7 @@ import { allowedImageMimes } from '../middlewares/uploadMiddleware.js'
 import { createNotifications } from '../models/notificationRepository.js'
 import { findUserBySlug } from '../models/userRepository.js'
 import {
+  countPendingParticipants,
   createCommentForTratto,
   createEvidenceForTratto,
   createTratto,
@@ -13,6 +14,7 @@ import {
   findVerdictByTrattoId,
   findVisibleTrattoById,
   listVisibleTrattosForUser,
+  updateParticipantInviteStatus,
   updateTrattoStatus,
   upsertVote,
   userHasApprovedCommunityMembership,
@@ -257,6 +259,62 @@ export function requestJudgment(request, response, next) {
       const notifications = buildJudgmentNotifications(refreshed, request.user, request.body?.reason)
       createNotifications(notifications, { db })
       return refreshed
+    })()
+
+    return response.status(200).json({
+      tratto: toTrattoDetailDto(result, request.user.id),
+    })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+export function respondToInvite(request, response, next) {
+  try {
+    const decision = normalizeString(request.body?.decision)
+
+    if (!['accepted', 'declined'].includes(decision)) {
+      throw validationError('Invalid invite response', { decision: 'invalid' })
+    }
+
+    const tratto = findTrattoById(request.params.id)
+
+    if (!tratto) {
+      throw httpError(404, 'Tratto not found', 'NOT_FOUND')
+    }
+
+    const participant = tratto.participants.find((entry) => entry.id === request.params.participantId)
+
+    if (!participant) {
+      throw httpError(404, 'Participant not found', 'NOT_FOUND')
+    }
+
+    if (participant.user?.id !== request.user.id) {
+      throw httpError(403, 'You can only respond to your own invite', 'FORBIDDEN', {
+        actor: 'not_allowed',
+      })
+    }
+
+    if (participant.inviteStatus !== 'pending') {
+      throw conflictError('Invite was already answered', { invite: 'already_answered' })
+    }
+
+    if (!['pending', 'active'].includes(tratto.status)) {
+      throw conflictError('Tratto is no longer accepting responses', { status: 'invalid_state' })
+    }
+
+    const result = db.transaction(() => {
+      updateParticipantInviteStatus(participant.id, decision, { db })
+
+      if (decision === 'accepted' && tratto.status === 'pending') {
+        const remaining = countPendingParticipants(tratto.id, { db })
+
+        if (remaining === 0) {
+          updateTrattoStatus(tratto.id, 'active', { db })
+        }
+      }
+
+      return findVisibleTrattoById(tratto.id, request.user.id, { db })
     })()
 
     return response.status(200).json({

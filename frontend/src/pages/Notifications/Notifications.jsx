@@ -88,7 +88,6 @@ export function Notifications() {
           title="Central de ocorrências"
           titleAs="h1"
         >
-          {source === 'api' ? <p className="pixel-feedback">Notificações reais da API.</p> : null}
           <div className="notification-list">
             {notifications.map((notification) => (
               <article className="notification-card" data-unread={!notification.readAt} key={notification.id}>

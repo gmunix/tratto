@@ -229,6 +229,32 @@ export function createCommentForTratto(
   }
 }
 
+export function updateParticipantInviteStatus(
+  participantId,
+  inviteStatus,
+  { db = defaultDb, now = new Date().toISOString() } = {},
+) {
+  const acceptedAt = inviteStatus === 'accepted' ? now : null
+  const declinedAt = inviteStatus === 'declined' ? now : null
+  db.prepare(
+    `UPDATE tratto_participants
+      SET invite_status = ?, accepted_at = ?, declined_at = ?
+      WHERE id = ?`,
+  ).run(inviteStatus, acceptedAt, declinedAt, participantId)
+}
+
+export function countPendingParticipants(trattoId, { db = defaultDb } = {}) {
+  return db
+    .prepare(
+      `SELECT COUNT(*) AS count
+      FROM tratto_participants
+      WHERE tratto_id = ?
+        AND invite_status = 'pending'
+        AND role IN ('participant', 'judge')`,
+    )
+    .get(trattoId).count
+}
+
 export function updateTrattoStatus(
   trattoId,
   status,

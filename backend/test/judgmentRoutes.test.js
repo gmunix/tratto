@@ -430,3 +430,64 @@ async function insertParticipant(overrides) {
     overrides.invitedAt ?? '2026-06-01T12:00:00.000Z',
   )
 }
+
+test('POST /api/trattos/:id/participants/:participantId/respond promotes Tratto to active when all accept', async () => {
+  const creator = await registerUser({ email: 'invite-creator@example.com', slug: 'invite-creator', displayName: 'Invite Creator' })
+  const participantA = await registerUser({ email: 'invite-a@example.com', slug: 'invite-a', displayName: 'Invite A' })
+  const participantB = await registerUser({ email: 'invite-b@example.com', slug: 'invite-b', displayName: 'Invite B' })
+
+  await insertTratto({ id: 'trt-invite', creatorId: creator.user.id, status: 'pending', decisionMethod: 'mutual' })
+  await insertParticipant({ id: 'trt-invite-creator', trattoId: 'trt-invite', user: creator.user, role: 'creator' })
+  await insertParticipant({ id: 'trt-invite-a', trattoId: 'trt-invite', user: participantA.user, inviteStatus: 'pending', acceptedAt: null })
+  await insertParticipant({ id: 'trt-invite-b', trattoId: 'trt-invite', user: participantB.user, inviteStatus: 'pending', acceptedAt: null })
+
+  const firstAccept = await request(app)
+    .post('/api/trattos/trt-invite/participants/trt-invite-a/respond')
+    .set('Authorization', `Bearer ${participantA.token}`)
+    .send({ decision: 'accepted' })
+    .expect(200)
+
+  assert.equal(firstAccept.body.tratto.status, 'pending', 'still pending until everyone accepts')
+
+  const secondAccept = await request(app)
+    .post('/api/trattos/trt-invite/participants/trt-invite-b/respond')
+    .set('Authorization', `Bearer ${participantB.token}`)
+    .send({ decision: 'accepted' })
+    .expect(200)
+
+  assert.equal(secondAccept.body.tratto.status, 'active', 'promotes to active when last invitee accepts')
+})
+
+test('POST /api/trattos/:id/participants/:participantId/respond rejects wrong actor, repeat answers, and bad payloads', async () => {
+  const creator = await registerUser({ email: 'invite-bad-creator@example.com', slug: 'invite-bad-creator', displayName: 'Invite Bad Creator' })
+  const participant = await registerUser({ email: 'invite-bad-p@example.com', slug: 'invite-bad-p', displayName: 'Invite Bad P' })
+  const outsider = await registerUser({ email: 'invite-bad-out@example.com', slug: 'invite-bad-out', displayName: 'Invite Bad Out' })
+
+  await insertTratto({ id: 'trt-invite-bad', creatorId: creator.user.id, status: 'pending', decisionMethod: 'mutual' })
+  await insertParticipant({ id: 'trt-invite-bad-creator', trattoId: 'trt-invite-bad', user: creator.user, role: 'creator' })
+  await insertParticipant({ id: 'trt-invite-bad-p', trattoId: 'trt-invite-bad', user: participant.user, inviteStatus: 'pending', acceptedAt: null })
+
+  await request(app)
+    .post('/api/trattos/trt-invite-bad/participants/trt-invite-bad-p/respond')
+    .set('Authorization', `Bearer ${outsider.token}`)
+    .send({ decision: 'accepted' })
+    .expect(403)
+
+  await request(app)
+    .post('/api/trattos/trt-invite-bad/participants/trt-invite-bad-p/respond')
+    .set('Authorization', `Bearer ${participant.token}`)
+    .send({ decision: 'maybe' })
+    .expect(400)
+
+  await request(app)
+    .post('/api/trattos/trt-invite-bad/participants/trt-invite-bad-p/respond')
+    .set('Authorization', `Bearer ${participant.token}`)
+    .send({ decision: 'declined' })
+    .expect(200)
+
+  await request(app)
+    .post('/api/trattos/trt-invite-bad/participants/trt-invite-bad-p/respond')
+    .set('Authorization', `Bearer ${participant.token}`)
+    .send({ decision: 'accepted' })
+    .expect(409)
+})

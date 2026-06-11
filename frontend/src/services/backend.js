@@ -77,3 +77,56 @@ export async function updateTheme(theme) {
   const { data } = await api.patch('/me/theme', { theme })
   return data.user
 }
+
+export async function searchUsers(query) {
+  const { data } = await api.get('/users', { params: { query } })
+  return data.users
+}
+
+export async function uploadEvidence(trattoId, { file, type, caption }) {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('type', type)
+
+  if (caption) {
+    formData.append('caption', caption)
+  }
+
+  const { data } = await api.post(`/trattos/${trattoId}/evidences/upload`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
+
+export async function addComment(trattoId, content) {
+  const { data } = await api.post(`/trattos/${trattoId}/comments`, { content })
+  return data
+}
+
+export async function respondToInvite(trattoId, participantId, decision) {
+  const { data } = await api.post(
+    `/trattos/${trattoId}/participants/${participantId}/respond`,
+    { decision },
+  )
+  return data.tratto
+}
+
+export async function requestJudgment(trattoId, reason) {
+  const { data } = await api.post(`/trattos/${trattoId}/request-judgment`, reason ? { reason } : {})
+  return data.tratto
+}
+
+export async function castVote(trattoId, payload) {
+  const { data } = await api.post(`/trattos/${trattoId}/votes`, payload)
+  return data.vote
+}
+
+export async function createVerdict(trattoId, payload) {
+  const { data } = await api.post(`/trattos/${trattoId}/verdict`, payload)
+  return data.tratto
+}
+
+export async function completeTratto(trattoId, note) {
+  const { data } = await api.post(`/trattos/${trattoId}/complete`, note ? { note } : {})
+  return data.tratto
+}
