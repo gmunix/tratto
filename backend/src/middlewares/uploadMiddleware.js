@@ -6,13 +6,27 @@ import multer from 'multer'
 
 import { environment } from '../config/environment.js'
 
-const allowedImageMimes = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp'])
-const allowedFileMimes = new Set([
+export const allowedImageMimes = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp'])
+export const allowedFileMimes = new Set([
   ...allowedImageMimes,
   'application/pdf',
   'text/plain',
   'application/zip',
 ])
+
+const mimeExtensions = new Map([
+  ['image/png', '.png'],
+  ['image/jpeg', '.jpg'],
+  ['image/gif', '.gif'],
+  ['image/webp', '.webp'],
+  ['application/pdf', '.pdf'],
+  ['text/plain', '.txt'],
+  ['application/zip', '.zip'],
+])
+
+export function extensionForMime(mime) {
+  return mimeExtensions.get(mime) ?? '.bin'
+}
 
 function resolveUploadDir() {
   const dir = path.resolve(environment.uploadDir)
@@ -29,16 +43,12 @@ const storage = multer.diskStorage({
     }
   },
   filename: (request, file, cb) => {
-    const ext = path.extname(file.originalname).slice(0, 16).toLowerCase()
-    cb(null, `${randomUUID()}${ext}`)
+    cb(null, `${randomUUID()}${extensionForMime(file.mimetype)}`)
   },
 })
 
 function fileFilter(request, file, cb) {
-  const type = request.body?.type ?? request.query?.type
-  const allowed = type === 'image' ? allowedImageMimes : allowedFileMimes
-
-  if (!allowed.has(file.mimetype)) {
+  if (!allowedFileMimes.has(file.mimetype)) {
     cb(new MulterTypeError(`Unsupported mime type: ${file.mimetype}`))
     return
   }

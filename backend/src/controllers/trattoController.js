@@ -1,4 +1,7 @@
+import fs from 'node:fs'
+
 import { db } from '../database/connection.js'
+import { allowedImageMimes } from '../middlewares/uploadMiddleware.js'
 import { createNotifications } from '../models/notificationRepository.js'
 import { findUserBySlug } from '../models/userRepository.js'
 import {
@@ -120,6 +123,9 @@ export function addEvidence(request, response, next) {
 }
 
 export function uploadEvidenceRoute(request, response, next) {
+  const uploadedPath = request.file?.path ?? null
+  let consumed = false
+
   try {
     if (!request.file) {
       throw validationError('File is required', { file: 'required' })
@@ -131,6 +137,12 @@ export function uploadEvidenceRoute(request, response, next) {
       throw validationError('Invalid evidence type for upload', { type: 'invalid' })
     }
 
+    if (type === 'image' && !allowedImageMimes.has(request.file.mimetype)) {
+      throw validationError('Mime type does not match declared evidence type', {
+        file: 'unsupported_type',
+      })
+    }
+
     const tratto = findTrattoById(request.params.id)
 
     if (!tratto) {
@@ -140,7 +152,8 @@ export function uploadEvidenceRoute(request, response, next) {
     const currentParticipant = findParticipantForUser(tratto, request.user.id)
     enforceEvidenceRules(tratto, currentParticipant)
 
-    const caption = normalizeString(request.body?.caption) || request.file.originalname
+    const userCaption = normalizeString(request.body?.caption)
+    const caption = userCaption || request.file.originalname
     const metadata = {
       fileUrl: `/uploads/${request.file.filename}`,
       mimeType: request.file.mimetype,
@@ -157,18 +170,29 @@ export function uploadEvidenceRoute(request, response, next) {
         { db },
       )
       const evidenceNotifications = buildEvidenceNotifications(created.tratto, request.user)
-      const mentionNotifications = buildMentionNotifications(created.tratto, request.user, caption, 'evidence')
+      const mentionNotifications = userCaption
+        ? buildMentionNotifications(created.tratto, request.user, caption, 'evidence')
+        : []
       createNotifications([...evidenceNotifications, ...mentionNotifications], { db })
 
       return created
     })()
 
+    consumed = true
     return response.status(201).json({
       evidence: toEvidenceDto(result.evidence),
       tratto: toTrattoDetailDto(result.tratto, request.user.id),
     })
   } catch (error) {
     return next(error)
+  } finally {
+    if (!consumed && uploadedPath) {
+      try {
+        fs.unlinkSync(uploadedPath)
+      } catch {
+        // best-effort cleanup; missing file is acceptable
+      }
+    }
   }
 }
 

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync, existsSync } from 'node:fs'
+import { mkdtempSync, readdirSync, rmSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
@@ -90,6 +90,69 @@ test('POST /api/trattos/:id/evidences/upload rejects unsupported mime', async ()
   assert.equal(response.body.fields.file, 'unsupported_type')
 })
 
+test('POST /api/trattos/:id/evidences/upload rejects when file field is missing', async () => {
+  const creator = await registerUser({ email: 'upload-missing@example.com', slug: 'upload-missing', displayName: 'Upload Missing' })
+
+  await insertTratto({ id: 'trt-upload-missing', creatorId: creator.user.id, status: 'active', decisionMethod: 'vote' })
+  await insertParticipant({ id: 'trt-upload-missing-creator', trattoId: 'trt-upload-missing', user: creator.user, role: 'creator' })
+
+  const response = await request(app)
+    .post('/api/trattos/trt-upload-missing/evidences/upload')
+    .set('Authorization', `Bearer ${creator.token}`)
+    .field('type', 'image')
+    .expect(400)
+
+  assert.equal(response.body.fields.file, 'required')
+})
+
+test('POST /api/trattos/:id/evidences/upload rejects PDF when declared type is image', async () => {
+  const creator = await registerUser({ email: 'upload-mismatch@example.com', slug: 'upload-mismatch', displayName: 'Upload Mismatch' })
+
+  await insertTratto({ id: 'trt-upload-mismatch', creatorId: creator.user.id, status: 'active', decisionMethod: 'vote' })
+  await insertParticipant({ id: 'trt-upload-mismatch-creator', trattoId: 'trt-upload-mismatch', user: creator.user, role: 'creator' })
+
+  const filesBefore = countUploadedFiles()
+
+  const response = await request(app)
+    .post('/api/trattos/trt-upload-mismatch/evidences/upload')
+    .set('Authorization', `Bearer ${creator.token}`)
+    .field('type', 'image')
+    .attach('file', Buffer.from('%PDF-fake'), { filename: 'fake.pdf', contentType: 'application/pdf' })
+    .expect(400)
+
+  assert.equal(response.body.fields.file, 'unsupported_type')
+  assert.equal(countUploadedFiles(), filesBefore, 'orphan file from rejected upload must be cleaned up')
+})
+
+test('POST /api/trattos/:id/evidences/upload rejects non-participants and wrong status', async () => {
+  const creator = await registerUser({ email: 'upload-acl-creator@example.com', slug: 'upload-acl-creator', displayName: 'Upload ACL Creator' })
+  const outsider = await registerUser({ email: 'upload-acl-outsider@example.com', slug: 'upload-acl-outsider', displayName: 'Upload ACL Outsider' })
+
+  await insertTratto({ id: 'trt-upload-acl', creatorId: creator.user.id, status: 'active', decisionMethod: 'vote' })
+  await insertParticipant({ id: 'trt-upload-acl-creator', trattoId: 'trt-upload-acl', user: creator.user, role: 'creator' })
+
+  const filesBefore = countUploadedFiles()
+
+  await request(app)
+    .post('/api/trattos/trt-upload-acl/evidences/upload')
+    .set('Authorization', `Bearer ${outsider.token}`)
+    .field('type', 'image')
+    .attach('file', Buffer.from('fake-png'), { filename: 'bad.png', contentType: 'image/png' })
+    .expect(403)
+
+  await insertTratto({ id: 'trt-upload-finished', creatorId: creator.user.id, status: 'finished', decisionMethod: 'vote' })
+  await insertParticipant({ id: 'trt-upload-finished-creator', trattoId: 'trt-upload-finished', user: creator.user, role: 'creator' })
+
+  await request(app)
+    .post('/api/trattos/trt-upload-finished/evidences/upload')
+    .set('Authorization', `Bearer ${creator.token}`)
+    .field('type', 'image')
+    .attach('file', Buffer.from('fake-png'), { filename: 'late.png', contentType: 'image/png' })
+    .expect(409)
+
+  assert.equal(countUploadedFiles(), filesBefore, 'rejected uploads must not persist files on disk')
+})
+
 test('POST /api/trattos/:id/evidences rejects image/file types in JSON route', async () => {
   const creator = await registerUser({ email: 'upload-json@example.com', slug: 'upload-json', displayName: 'Upload Json' })
 
@@ -104,6 +167,10 @@ test('POST /api/trattos/:id/evidences rejects image/file types in JSON route', a
 
   assert.equal(response.body.fields.type, 'use_upload_route')
 })
+
+function countUploadedFiles() {
+  return readdirSync(uploadDir).filter((name) => !name.startsWith('.')).length
+}
 
 async function registerUser(overrides = {}) {
   const response = await request(app)

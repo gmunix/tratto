@@ -464,10 +464,13 @@ Rules:
 
 - Uses bearer auth like other evidence routes; only accepted creator/participant can upload, only while status is `active` or `review`.
 - `image` accepts `image/png`, `image/jpeg`, `image/gif`, `image/webp`. `file` additionally accepts `application/pdf`, `text/plain`, `application/zip`.
+- A declared `type=image` with a non-image mime returns `400` with `fields.file = "unsupported_type"`.
 - Files exceeding `UPLOAD_MAX_BYTES` (default 5 MB) return `400` with `fields.file = "too_large"`.
 - Unsupported mimes return `400` with `fields.file = "unsupported_type"`.
-- Stored files are served from `GET /uploads/:filename` (no auth — keep filenames opaque).
-- Mention parsing runs on `caption`, same as text evidence.
+- Filenames are `<uuid><mime-derived-extension>` — the original filename is preserved only in `metadata.originalName`.
+- Any failure path (permission denial, validation, DB error) unlinks the uploaded file before responding.
+- Stored files are served from `GET /uploads/:filename` (no auth — filenames are opaque UUIDs; treat as a known limitation for the class scope).
+- Mention parsing runs on `caption` only when the caller provided a non-empty caption (default-to-filename does not trigger mentions).
 
 ### Add Comment
 
