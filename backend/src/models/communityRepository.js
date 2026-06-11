@@ -3,6 +3,9 @@ import { randomUUID } from 'node:crypto'
 import { db as defaultDb } from '../database/connection.js'
 import { toCommunityMembershipDto } from '../utils/communityDto.js'
 
+const approvedMembershipPredicate = `membership.status = 'member'
+  AND membership.role IN ('creator', 'admin', 'member')`
+
 export function listVisibleCommunitiesForUser(userId, query, { db = defaultDb } = {}) {
   const normalizedQuery = normalizeQuery(query)
   const params = { userId }
@@ -22,6 +25,9 @@ export function listVisibleCommunitiesForUser(userId, query, { db = defaultDb } 
         c.description,
         c.privacy,
         c.creator_id,
+        creator.display_name AS creator_display_name,
+        creator.slug AS creator_slug,
+        creator.avatar_url AS creator_avatar_url,
         c.created_at,
         c.updated_at,
         membership.id AS membership_id,
@@ -34,6 +40,7 @@ export function listVisibleCommunitiesForUser(userId, query, { db = defaultDb } 
         membership.updated_at AS membership_updated_at,
         COALESCE(member_counts.member_count, 0) AS member_count
       FROM communities c
+      INNER JOIN users creator ON creator.id = c.creator_id
       LEFT JOIN community_memberships membership
         ON membership.community_id = c.id
         AND membership.user_id = @userId
@@ -43,7 +50,7 @@ export function listVisibleCommunitiesForUser(userId, query, { db = defaultDb } 
         WHERE status = 'member'
         GROUP BY community_id
       ) member_counts ON member_counts.community_id = c.id
-      WHERE (c.privacy = 'public' OR membership.id IS NOT NULL)
+      WHERE (c.privacy = 'public' OR (${approvedMembershipPredicate}))
       ${queryFilter}
       ORDER BY c.created_at DESC, c.name ASC`,
     )
@@ -61,6 +68,9 @@ export function listUserCommunities(userId, { db = defaultDb } = {}) {
         c.description,
         c.privacy,
         c.creator_id,
+        creator.display_name AS creator_display_name,
+        creator.slug AS creator_slug,
+        creator.avatar_url AS creator_avatar_url,
         c.created_at,
         c.updated_at,
         membership.id AS membership_id,
@@ -73,6 +83,7 @@ export function listUserCommunities(userId, { db = defaultDb } = {}) {
         membership.updated_at AS membership_updated_at,
         COALESCE(member_counts.member_count, 0) AS member_count
       FROM communities c
+      INNER JOIN users creator ON creator.id = c.creator_id
       INNER JOIN community_memberships membership
         ON membership.community_id = c.id
         AND membership.user_id = ?
@@ -82,7 +93,7 @@ export function listUserCommunities(userId, { db = defaultDb } = {}) {
         WHERE status = 'member'
         GROUP BY community_id
       ) member_counts ON member_counts.community_id = c.id
-      WHERE membership.status IN ('pending', 'member')
+      WHERE ${approvedMembershipPredicate}
       ORDER BY c.created_at DESC, c.name ASC`,
     )
     .all(userId)
@@ -100,6 +111,9 @@ export function findCommunityBySlugForUser(slug, userId, { db = defaultDb } = {}
           c.description,
           c.privacy,
           c.creator_id,
+          creator.display_name AS creator_display_name,
+          creator.slug AS creator_slug,
+          creator.avatar_url AS creator_avatar_url,
           c.created_at,
           c.updated_at,
           membership.id AS membership_id,
@@ -112,6 +126,7 @@ export function findCommunityBySlugForUser(slug, userId, { db = defaultDb } = {}
           membership.updated_at AS membership_updated_at,
           COALESCE(member_counts.member_count, 0) AS member_count
         FROM communities c
+        INNER JOIN users creator ON creator.id = c.creator_id
         LEFT JOIN community_memberships membership
           ON membership.community_id = c.id
           AND membership.user_id = ?
@@ -233,6 +248,12 @@ function mapCommunityWithMembership(row) {
     description: row.description,
     privacy: row.privacy,
     creatorId: row.creator_id,
+    creator: {
+      id: row.creator_id,
+      displayName: row.creator_display_name,
+      slug: row.creator_slug,
+      avatarUrl: row.creator_avatar_url,
+    },
     memberCount: row.member_count,
     activeTrattoCount: 0,
     currentUserMembership: toCommunityMembershipDto(membership),

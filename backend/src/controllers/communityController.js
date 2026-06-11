@@ -96,7 +96,7 @@ function canViewCommunity(community) {
     return true
   }
 
-  return ['pending', 'member'].includes(community.currentUserMembership?.status)
+  return community.currentUserMembership?.status === 'member'
 }
 
 function isUniqueConstraintError(error, field) {

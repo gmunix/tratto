@@ -78,9 +78,21 @@ test('GET /api/communities returns public and user private communities', async (
   assert.equal(slugs.includes('private-list'), true)
   assert.equal(slugs.includes('hidden-list'), false)
   assert.deepEqual(mySlugs, ['private-list'])
-  assert.equal(privateCommunity.currentUserMembership.status, 'member')
+  assert.deepEqual(privateCommunity.currentUserMembership, {
+    role: 'member',
+    status: 'member',
+  })
   assert.equal(privateCommunity.memberCount, 1)
   assert.equal(privateCommunity.activeTrattoCount, 0)
+  assert.deepEqual(privateCommunity.creator, {
+    id: user.id,
+    displayName: 'Test User',
+    slug: 'community-member',
+    avatarUrl: null,
+  })
+  assert.equal(privateCommunity.creatorId, undefined)
+  assert.equal(privateCommunity.currentUserMembership.id, undefined)
+  assert.equal(privateCommunity.currentUserMembership.createdAt, undefined)
 })
 
 test('GET /api/communities filters visible communities by query', async () => {
@@ -137,8 +149,16 @@ test('POST /api/communities creates community and creator membership', async () 
 
   assert.equal(response.body.community.slug, 'nova-comunidade')
   assert.equal(response.body.community.privacy, 'private')
-  assert.equal(response.body.community.creatorId, user.id)
-  assert.equal(response.body.community.currentUserMembership.role, 'creator')
+  assert.deepEqual(response.body.community.creator, {
+    id: user.id,
+    displayName: 'Test User',
+    slug: 'community-creator',
+    avatarUrl: null,
+  })
+  assert.deepEqual(response.body.community.currentUserMembership, {
+    role: 'creator',
+    status: 'member',
+  })
   assert.deepEqual(membership, { role: 'creator', status: 'member' })
 })
 
@@ -197,10 +217,60 @@ test('GET /api/communities/:slug hides private communities from non-members', as
     .expect(200)
 
   assert.equal(response.body.community.slug, 'private-detail')
-  assert.equal(response.body.community.currentUserMembership.role, 'creator')
+  assert.deepEqual(response.body.community.currentUserMembership, {
+    role: 'creator',
+    status: 'member',
+  })
   assert.equal(response.body.members.length, 1)
   assert.deepEqual(response.body.trattos, [])
   assert.deepEqual(response.body.pendingRequests, [])
+})
+
+test('private communities reject pending denied and removed memberships', async () => {
+  const owner = await registerUser({
+    email: 'visibility-owner@example.com',
+    slug: 'visibility-owner',
+  })
+  const user = await registerUser({
+    email: 'visibility-user@example.com',
+    slug: 'visibility-user',
+  })
+
+  for (const status of ['pending', 'denied', 'removed']) {
+    await insertCommunity({
+      id: `com-private-${status}`,
+      slug: `private-${status}`,
+      privacy: 'private',
+      creatorId: owner.user.id,
+    })
+    await insertMembership({
+      id: `mem-private-${status}`,
+      communityId: `com-private-${status}`,
+      userId: user.user.id,
+      role: 'member',
+      status,
+    })
+  }
+
+  const listResponse = await request(app)
+    .get('/api/communities?query=private')
+    .set('Authorization', `Bearer ${user.token}`)
+    .expect(200)
+
+  const listedSlugs = listResponse.body.communities.map((community) => community.slug)
+  const mySlugs = listResponse.body.myCommunities.map((community) => community.slug)
+
+  assert.equal(listedSlugs.includes('private-pending'), false)
+  assert.equal(listedSlugs.includes('private-denied'), false)
+  assert.equal(listedSlugs.includes('private-removed'), false)
+  assert.deepEqual(mySlugs, [])
+
+  for (const status of ['pending', 'denied', 'removed']) {
+    await request(app)
+      .get(`/api/communities/private-${status}`)
+      .set('Authorization', `Bearer ${user.token}`)
+      .expect(404)
+  }
 })
 
 async function registerUser(overrides = {}) {

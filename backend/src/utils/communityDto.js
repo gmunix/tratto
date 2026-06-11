@@ -5,7 +5,7 @@ export function toCommunityDto(community) {
     slug: community.slug,
     description: community.description,
     privacy: community.privacy,
-    creatorId: community.creatorId,
+    creator: community.creator,
     memberCount: community.memberCount,
     activeTrattoCount: community.activeTrattoCount,
     currentUserMembership: community.currentUserMembership,
@@ -20,14 +20,7 @@ export function toCommunityMembershipDto(membership) {
   }
 
   return {
-    id: membership.id,
-    communityId: membership.communityId,
-    userId: membership.userId,
     role: membership.role,
     status: membership.status,
-    requestedAt: membership.requestedAt,
-    decidedAt: membership.decidedAt,
-    createdAt: membership.createdAt,
-    updatedAt: membership.updatedAt,
   }
 }
