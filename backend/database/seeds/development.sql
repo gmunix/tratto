@@ -9,6 +9,7 @@ DELETE FROM trattos;
 DELETE FROM community_memberships;
 DELETE FROM communities;
 DELETE FROM auth_tokens;
+DELETE FROM notifications;
 DELETE FROM users;
 
 INSERT INTO users (
@@ -340,4 +341,65 @@ INSERT INTO tratto_verdicts (
     NULL,
     'Trato cumprido e arquivado sem recurso.',
     '2026-04-30T23:59:00.000Z'
+  );
+
+INSERT INTO notifications (
+  id,
+  user_id,
+  type,
+  title,
+  body,
+  target_url,
+  read_at,
+  created_at
+) VALUES
+  (
+    'ntf-invite-ana',
+    'usr-ana',
+    'invite',
+    'Convite para Tratto',
+    'Carlos Reis convidou você para o desafio de corrida abaixo de 30 minutos.',
+    '/trattos/trt-0002',
+    NULL,
+    '2026-05-15T12:01:00.000Z'
+  ),
+  (
+    'ntf-evidence-marcos',
+    'usr-marcos',
+    'evidence',
+    'Nova evidência no Tratto',
+    'Julia Souza adicionou uma contraevidência no desafio dos pães de queijo.',
+    '/trattos/trt-0001',
+    NULL,
+    '2026-05-12T09:45:00.000Z'
+  ),
+  (
+    'ntf-verdict-rafa',
+    'usr-rafa',
+    'verdict',
+    'Veredito publicado',
+    'O conselho identificou o perdedor no Tratto do filme clássico.',
+    '/trattos/trt-0003',
+    '2026-04-04T11:00:00.000Z',
+    '2026-04-04T10:01:00.000Z'
+  ),
+  (
+    'ntf-community-julia',
+    'usr-julia',
+    'community_request',
+    'Pedido de entrada na comunidade',
+    'Carlos Reis solicitou entrada na República 404.',
+    '/communities/republica-404',
+    NULL,
+    '2026-05-06T12:00:00.000Z'
+  ),
+  (
+    'ntf-system-marcos',
+    'usr-marcos',
+    'system',
+    'Tratto está chegando',
+    'O prazo do desafio dos pães de queijo termina em breve.',
+    '/trattos/trt-0001',
+    '2026-05-13T08:00:00.000Z',
+    '2026-05-13T07:30:00.000Z'
   );

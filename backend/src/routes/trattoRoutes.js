@@ -1,6 +1,7 @@
 import { Router } from 'express'
 
 import {
+  addEvidence,
   createTrattoRoute,
   getTratto,
   listTrattos,
@@ -12,4 +13,5 @@ export const trattoRoutes = Router()
 trattoRoutes.use(requireAuth)
 trattoRoutes.get('/', listTrattos)
 trattoRoutes.post('/', createTrattoRoute)
+trattoRoutes.post('/:id/evidences', addEvidence)
 trattoRoutes.get('/:id', getTratto)
