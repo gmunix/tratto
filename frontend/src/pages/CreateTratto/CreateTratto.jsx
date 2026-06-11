@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { Button } from '@components/common/Button'
@@ -7,18 +7,21 @@ import { AppLayout } from '@components/layout/AppLayout'
 import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
 import { decisionMethodLabels, getCommunityBySlugOrId, trattoCategories } from '@/data/mockTrattos'
+import { createTratto, getCommunity, searchUsers } from '@/services/backend'
+import { getSession } from '@/services/session'
 
 const initialForm = {
   title: '',
   description: '',
   category: trattoCategories[0].name,
-  participantName: '',
+  participantQuery: '',
   participants: [],
   rules: [''],
   deadline: '',
   consequence: '',
   decisionMethod: 'mutual',
   judge: '',
+  judgeResolved: null,
 }
 
 function createProtocol() {
@@ -27,12 +30,101 @@ function createProtocol() {
 
 export function CreateTratto() {
   const [searchParams] = useSearchParams()
-  const selectedCommunity = getCommunityBySlugOrId(searchParams.get('community'))
+  const fallbackCommunity = getCommunityBySlugOrId(searchParams.get('community'))
   const [form, setForm] = useState(initialForm)
   const [submitted, setSubmitted] = useState(false)
   const [protocol, setProtocol] = useState(createProtocol)
+  const [createdTratto, setCreatedTratto] = useState(null)
+  const [apiCommunity, setApiCommunity] = useState(null)
+  const [error, setError] = useState('')
+  const [participantSuggestions, setParticipantSuggestions] = useState([])
+  const [judgeSuggestions, setJudgeSuggestions] = useState([])
+  const selectedCommunity = apiCommunity ?? fallbackCommunity
 
-  const hasRequiredJudge = form.decisionMethod !== 'judge' || Boolean(form.judge.trim())
+  useEffect(() => {
+    const community = searchParams.get('community')
+
+    if (!community || !getSession().token) {
+      return
+    }
+
+    getCommunity(community)
+      .then((data) => setApiCommunity(data.community))
+      .catch(() => setApiCommunity(null))
+  }, [searchParams])
+
+  useEffect(() => {
+    let cancelled = false
+    const timeout = setTimeout(() => {
+      if (cancelled) {
+        return
+      }
+
+      const query = form.participantQuery.trim()
+
+      if (query.length < 2 || !getSession().token) {
+        setParticipantSuggestions([])
+        return
+      }
+
+      searchUsers(query)
+        .then((users) => {
+          if (!cancelled) {
+            setParticipantSuggestions(users)
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setParticipantSuggestions([])
+          }
+        })
+    }, 200)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timeout)
+    }
+  }, [form.participantQuery])
+
+  useEffect(() => {
+    let cancelled = false
+    const timeout = setTimeout(() => {
+      if (cancelled) {
+        return
+      }
+
+      const query = form.judge.trim()
+      const shouldClear =
+        form.decisionMethod !== 'judge' ||
+        query.length < 2 ||
+        !getSession().token ||
+        (form.judgeResolved && form.judgeResolved.displayName === query)
+
+      if (shouldClear) {
+        setJudgeSuggestions([])
+        return
+      }
+
+      searchUsers(query)
+        .then((users) => {
+          if (!cancelled) {
+            setJudgeSuggestions(users)
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setJudgeSuggestions([])
+          }
+        })
+    }, 200)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timeout)
+    }
+  }, [form.decisionMethod, form.judge, form.judgeResolved])
+
+  const hasRequiredJudge = form.decisionMethod !== 'judge' || Boolean(form.judgeResolved)
   const canSubmit = Boolean(
     form.title &&
       form.deadline &&
@@ -47,25 +139,35 @@ export function CreateTratto() {
     setForm((currentForm) => ({ ...currentForm, [field]: value }))
   }
 
-  function addParticipant() {
-    const participantName = form.participantName.trim()
-
-    if (!participantName || form.participants.includes(participantName)) {
+  function selectParticipant(user) {
+    if (form.participants.some((entry) => entry.slug === user.slug)) {
+      setForm((currentForm) => ({ ...currentForm, participantQuery: '' }))
+      setParticipantSuggestions([])
       return
     }
 
     setForm((currentForm) => ({
       ...currentForm,
-      participantName: '',
-      participants: [...currentForm.participants, participantName],
+      participantQuery: '',
+      participants: [...currentForm.participants, { slug: user.slug, displayName: user.displayName }],
+    }))
+    setParticipantSuggestions([])
+  }
+
+  function removeParticipant(slug) {
+    setForm((currentForm) => ({
+      ...currentForm,
+      participants: currentForm.participants.filter((entry) => entry.slug !== slug),
     }))
   }
 
-  function removeParticipant(participantName) {
+  function selectJudge(user) {
     setForm((currentForm) => ({
       ...currentForm,
-      participants: currentForm.participants.filter((name) => name !== participantName),
+      judge: user.displayName,
+      judgeResolved: { slug: user.slug, displayName: user.displayName },
     }))
+    setJudgeSuggestions([])
   }
 
   function updateRule(index, value) {
@@ -86,10 +188,36 @@ export function CreateTratto() {
     }))
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
 
     if (canSubmit) {
+      setError('')
+
+      if (getSession().token) {
+        try {
+          const tratto = await createTratto({
+            title: form.title,
+            description: form.description,
+            category: form.category,
+            consequence: form.consequence,
+            deadline: form.deadline,
+            decisionMethod: form.decisionMethod,
+            participantSlugs: form.participants.map((entry) => entry.slug),
+            judgeSlug: form.decisionMethod === 'judge' ? form.judgeResolved?.slug : undefined,
+            communitySlug: selectedCommunity?.slug,
+            rules: form.rules.filter((rule) => rule.trim()),
+          })
+          setCreatedTratto(tratto)
+          setProtocol(tratto.caseNumber)
+          setSubmitted(true)
+          return
+        } catch (apiError) {
+          setError(apiError.response?.data?.message ?? 'A API recusou o protocolo. Revise slugs e regras.')
+          return
+        }
+      }
+
       setProtocol(createProtocol())
       setSubmitted(true)
     }
@@ -104,13 +232,13 @@ export function CreateTratto() {
             className="panel--narrow"
             subtitle={
               selectedCommunity
-                ? `O trato foi vinculado à comunidade /${selectedCommunity.slug}. Participantes serão notificados assim que o backend existir.`
-                : 'O trato foi enviado ao cartório social. Participantes serão notificados assim que o backend existir.'
+                ? `O trato foi vinculado à comunidade /${selectedCommunity.slug}. Participantes serão notificados.`
+                : 'O trato foi enviado ao cartório social. Participantes serão notificados.'
             }
             title={`Protocolo ${protocol}`}
             titleAs="p"
           >
-            <h1 className="case-card__title">{form.title}</h1>
+            <h1 className="case-card__title">{createdTratto?.title ?? form.title}</h1>
 
             <p className="notice">
               Estimativa oficial: dano à amizade moderado. Valor jurídico:
@@ -119,7 +247,7 @@ export function CreateTratto() {
 
             {selectedCommunity ? (
               <p className="notice">
-                Comunidade vinculada: {selectedCommunity.name}. O futuro payload usaria communityId {selectedCommunity.id}.
+                Comunidade vinculada: {selectedCommunity.name}.
               </p>
             ) : null}
 
@@ -159,7 +287,7 @@ export function CreateTratto() {
         >
             {selectedCommunity ? (
               <div className="notice">
-                Comunidade selecionada: {selectedCommunity.name} /{selectedCommunity.slug}. Este trato mockado será criado com communityId {selectedCommunity.id}.
+                Comunidade selecionada: {selectedCommunity.name} /{selectedCommunity.slug}.
               </div>
             ) : null}
 
@@ -199,33 +327,45 @@ export function CreateTratto() {
               />
             </Field>
 
-            <Field htmlFor="tratto-participant" hint="Obrigatório" label="Participantes">
+            <Field
+              hint="Busque por nome ou slug"
+              htmlFor="tratto-participant"
+              label="Participantes"
+            >
               <div style={{ display: 'grid', gap: 10 }}>
-                <div className="participant-input-row">
-                  <input
-                    className="input"
-                    id="tratto-participant"
-                    onChange={(event) => updateField('participantName', event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault()
-                        addParticipant()
-                      }
-                    }}
-                    placeholder="Nome ou usuário"
-                    value={form.participantName}
-                  />
-                  <Button onClick={addParticipant} type="button" variant="secondary">
-                    Adicionar
-                  </Button>
-                </div>
+                <input
+                  autoComplete="off"
+                  className="input"
+                  id="tratto-participant"
+                  onChange={(event) => updateField('participantQuery', event.target.value)}
+                  placeholder="Digite ao menos 2 letras (nome ou slug)"
+                  value={form.participantQuery}
+                />
+
+                {participantSuggestions.length ? (
+                  <ul className="suggestion-list">
+                    {participantSuggestions.map((user) => (
+                      <li key={user.id}>
+                        <button
+                          className="suggestion-list__item"
+                          onClick={() => selectParticipant(user)}
+                          type="button"
+                        >
+                          <strong>{user.displayName}</strong> <span className="muted-label">@{user.slug}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
 
                 {form.participants.length ? (
                   <div className="chip-row">
                     {form.participants.map((participant) => (
-                      <span className="chip" key={participant}>
-                        <span className="chip__text">{participant}</span>
-                        <button onClick={() => removeParticipant(participant)} type="button">
+                      <span className="chip" key={participant.slug}>
+                        <span className="chip__text">
+                          {participant.displayName} <span className="muted-label">@{participant.slug}</span>
+                        </span>
+                        <button onClick={() => removeParticipant(participant.slug)} type="button">
                           remover
                         </button>
                       </span>
@@ -302,14 +442,40 @@ export function CreateTratto() {
             </Field>
 
             {form.decisionMethod === 'judge' ? (
-              <Field htmlFor="tratto-judge" hint="Obrigatório para este método" label="Juiz escolhido">
+              <Field
+                hint={form.judgeResolved ? `Selecionado: @${form.judgeResolved.slug}` : 'Busque pelo nome ou slug'}
+                htmlFor="tratto-judge"
+                label="Juiz escolhido"
+              >
                 <input
+                  autoComplete="off"
                   className="input"
                   id="tratto-judge"
-                  onChange={(event) => updateField('judge', event.target.value)}
-                  placeholder="Nome da pessoa que vai decidir"
+                  onChange={(event) =>
+                    setForm((currentForm) => ({
+                      ...currentForm,
+                      judge: event.target.value,
+                      judgeResolved: null,
+                    }))
+                  }
+                  placeholder="Digite ao menos 2 letras"
                   value={form.judge}
                 />
+                {judgeSuggestions.length ? (
+                  <ul className="suggestion-list">
+                    {judgeSuggestions.map((user) => (
+                      <li key={user.id}>
+                        <button
+                          className="suggestion-list__item"
+                          onClick={() => selectJudge(user)}
+                          type="button"
+                        >
+                          <strong>{user.displayName}</strong> <span className="muted-label">@{user.slug}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </Field>
             ) : null}
 
@@ -322,6 +488,7 @@ export function CreateTratto() {
             <Button disabled={!canSubmit} fullWidth type="submit">
               Registrar trato
             </Button>
+            {error ? <p className="pixel-feedback">{error}</p> : null}
         </Panel>
       </PageContainer>
     </AppLayout>

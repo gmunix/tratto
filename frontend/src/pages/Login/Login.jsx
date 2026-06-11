@@ -1,15 +1,31 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { Button } from '@components/common/Button'
 import { Field } from '@components/common/Field'
 import { Panel } from '@components/layout/Panel'
+import { login } from '@/services/session'
 
 export function Login() {
   const navigate = useNavigate()
+  const [email, setEmail] = useState('marcos@example.com')
+  const [password, setPassword] = useState('Senha123!')
+  const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
-    navigate('/dashboard')
+    setError('')
+    setIsSubmitting(true)
+
+    try {
+      await login(email, password)
+      navigate('/dashboard')
+    } catch {
+      setError('Credenciais recusadas pelo cartório. Tente o usuário seedado.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -19,7 +35,7 @@ export function Login() {
           <Link className="brand-mark" to="/">
             TRATTO
           </Link>
-          <span className="muted-label">Acesso mockado</span>
+          <span className="muted-label">Acesso ao cartório</span>
         </div>
       </header>
 
@@ -29,7 +45,7 @@ export function Login() {
           bodyClassName="form-grid"
           className="login-panel"
           onSubmit={handleSubmit}
-          subtitle="Login visual apenas. Por enquanto qualquer tentativa abre o painel."
+          subtitle="Use seu e-mail e senha para acessar o cartório social."
           title="Entrar no cartório"
           titleAs="h1"
         >
@@ -38,8 +54,10 @@ export function Login() {
                 autoComplete="username"
                 className="input"
                 id="login-email"
-                placeholder="@marcosf"
-                type="text"
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="marcos@example.com"
+                type="email"
+                value={email}
               />
             </Field>
 
@@ -48,18 +66,17 @@ export function Login() {
                 autoComplete="current-password"
                 className="input"
                 id="login-password"
-                placeholder="Qualquer senha serve por enquanto"
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Senha123!"
                 type="password"
+                value={password}
               />
             </Field>
 
-            <p className="notice">
-              Autenticação real ainda não faz parte deste escopo. Este botão só
-              simula a entrada para validar navegação e hierarquia visual.
-            </p>
+            {error ? <p className="pixel-feedback">{error}</p> : null}
 
-            <Button fullWidth type="submit">
-              Entrar
+            <Button disabled={isSubmitting} fullWidth type="submit">
+              {isSubmitting ? 'Conferindo ata...' : 'Entrar'}
             </Button>
             <Button fullWidth to="/" variant="ghost">
               Voltar para a home

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { Button } from '@components/common/Button'
 import { Field } from '@components/common/Field'
@@ -7,11 +8,39 @@ import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
 import { getColorScheme, saveColorScheme } from '@/config/theme'
 import { currentUser } from '@/data/mockTrattos'
+import { updateMe, updateTheme } from '@/services/backend'
+import { getSession, logout, refreshCurrentUser, saveSession } from '@/services/session'
 
 export function Settings() {
+  const navigate = useNavigate()
   const [theme, setTheme] = useState(getColorScheme)
   const [savedMessage, setSavedMessage] = useState('')
+  const [profile, setProfile] = useState(currentUser)
+  const [signingOut, setSigningOut] = useState(false)
   const savedTimeoutRef = useRef(null)
+
+  async function handleLogout() {
+    setSigningOut(true)
+    try {
+      await logout()
+    } catch {
+      // logout still clears local session
+    }
+    navigate('/login', { replace: true })
+  }
+
+  useEffect(() => {
+    if (!getSession().token) {
+      return
+    }
+
+    refreshCurrentUser()
+      .then((user) => {
+        setProfile({ ...currentUser, ...user, name: user.displayName })
+        setTheme(user.theme)
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     saveColorScheme(theme)
@@ -27,14 +56,34 @@ export function Settings() {
     savedTimeoutRef.current = window.setTimeout(() => setSavedMessage(''), 2200)
   }
 
-  function applyTheme(nextTheme) {
+  async function applyTheme(nextTheme) {
     setTheme(nextTheme)
+
+    if (getSession().token) {
+      const user = await updateTheme(nextTheme)
+      saveSession(getSession().token, user)
+    }
+
     showSaved(`Tema ${nextTheme} aplicado neste usuário.`)
   }
 
-  function submitProfile(event) {
+  async function submitProfile(event) {
     event.preventDefault()
-    showSaved('Perfil mockado salvo para a próxima ata.')
+
+    if (getSession().token) {
+      const formData = new FormData(event.currentTarget)
+      const user = await updateMe({
+        displayName: formData.get('displayName'),
+        slug: formData.get('slug'),
+        avatarUrl: formData.get('avatarUrl') || null,
+      })
+      saveSession(getSession().token, user)
+      setProfile({ ...currentUser, ...user, name: user.displayName })
+      showSaved('Perfil atualizado.')
+      return
+    }
+
+    showSaved('Perfil atualizado.')
   }
 
   return (
@@ -44,10 +93,13 @@ export function Settings() {
           <Panel as="form" bodyClassName="form-grid" onSubmit={submitProfile} title="Perfil" titleAs="h1">
             <div className="avatar-placeholder">{currentUser.initials}</div>
             <Field htmlFor="display-name" label="Nome exibido">
-              <input className="input" defaultValue={currentUser.name} id="display-name" />
+              <input className="input" defaultValue={profile.name} id="display-name" name="displayName" />
             </Field>
             <Field htmlFor="user-slug" label="Slug público">
-              <input className="input" defaultValue={currentUser.slug} id="user-slug" />
+              <input className="input" defaultValue={profile.slug} id="user-slug" name="slug" />
+            </Field>
+            <Field htmlFor="avatar-url" label="Avatar URL">
+              <input className="input" defaultValue={profile.avatarUrl ?? ''} id="avatar-url" name="avatarUrl" />
             </Field>
             <Button type="submit">Salvar perfil</Button>
             {savedMessage ? <p className="pixel-feedback">{savedMessage}</p> : null}
@@ -89,8 +141,10 @@ export function Settings() {
           </Panel>
 
           <Panel bodyClassName="stack" title="Sessão">
-            <p className="notice">Login mockado como @{currentUser.slug}. Backend de autenticação entra em fase futura.</p>
-            <Button type="button" variant="ghost">Zona de perigo decorativa</Button>
+            <p className="notice">Sessão atual como @{profile.slug}.</p>
+            <Button disabled={signingOut} onClick={handleLogout} type="button" variant="ghost">
+              {signingOut ? 'Saindo...' : 'Sair da conta'}
+            </Button>
           </Panel>
         </aside>
       </PageContainer>

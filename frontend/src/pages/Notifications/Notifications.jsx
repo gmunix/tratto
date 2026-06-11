@@ -10,6 +10,12 @@ import {
   markMockNotificationAsRead,
   subscribeToMockNotificationState,
 } from '@/data/mockNotificationState'
+import {
+  getNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from '@/services/backend'
+import { getSession } from '@/services/session'
 
 const notificationTypeLabels = {
   invite: 'Convite',
@@ -22,19 +28,50 @@ const notificationTypeLabels = {
 
 export function Notifications() {
   const [notifications, setNotifications] = useState(getMockNotifications)
+  const [source, setSource] = useState('mock')
   const unreadCount = notifications.filter((notification) => !notification.readAt).length
 
   useEffect(() => {
+    if (getSession().token) {
+      refreshNotifications()
+    }
+
     return subscribeToMockNotificationState(() => {
-      setNotifications(getMockNotifications())
+      if (!getSession().token) {
+        setNotifications(getMockNotifications())
+      }
     })
   }, [])
 
-  function markAsRead(notificationId) {
+  async function refreshNotifications() {
+    try {
+      const data = await getNotifications()
+      setNotifications(data.notifications)
+      setSource('api')
+      window.dispatchEvent(new Event('tratto-notifications-changed'))
+    } catch {
+      setNotifications(getMockNotifications())
+      setSource('mock')
+    }
+  }
+
+  async function markAsRead(notificationId) {
+    if (source === 'api') {
+      await markNotificationRead(notificationId)
+      await refreshNotifications()
+      return
+    }
+
     markMockNotificationAsRead(notificationId)
   }
 
-  function markAllAsRead() {
+  async function markAllAsRead() {
+    if (source === 'api') {
+      await markAllNotificationsRead()
+      await refreshNotifications()
+      return
+    }
+
     markAllMockNotificationsAsRead()
   }
 

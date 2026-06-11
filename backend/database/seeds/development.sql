@@ -6,6 +6,94 @@ DELETE FROM evidences;
 DELETE FROM tratto_verdicts;
 DELETE FROM tratto_participants;
 DELETE FROM trattos;
+DELETE FROM community_memberships;
+DELETE FROM communities;
+DELETE FROM auth_tokens;
+DELETE FROM notifications;
+DELETE FROM users;
+
+INSERT INTO users (
+  id,
+  email,
+  password_hash,
+  display_name,
+  slug,
+  avatar_url,
+  theme,
+  created_at,
+  updated_at
+) VALUES
+  ('usr-marcos', 'marcos@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d6d6172636f73:0f81bbab29249d1309373935a3a86486328d41f3b3c3927f66ec0544b4be362bdcb54b31b94934b3a8e1ccb7c649f25eb794ff4ce94ccf113ef48b596c991c9b', 'Marcos Ferreira', 'marcosf', NULL, 'grime', '2026-05-01T12:00:00.000Z', '2026-05-01T12:00:00.000Z'),
+  ('usr-julia', 'julia@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d6a756c6961:b871d0592b23f71da643db0d5f5b04e8baf67e8d587395e3d3ffbf361e91cd0564604b9551a10b3f09095434a776236b3e2087b45b5a369ca30730e447265afa', 'Julia Souza', 'julias', NULL, 'grime', '2026-05-01T12:05:00.000Z', '2026-05-01T12:05:00.000Z'),
+  ('usr-carlos', 'carlos@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d6361726c6f73:d3c5a03c6dbdccfc7fd77cb1948348a4a45b2074862088946b48d4d53a9b5223290da1bd2b6c351b8cd873bb2be549b872a3f51b13685c244ffdc5d8276c2b3b', 'Carlos Reis', 'carlosr', NULL, 'grime', '2026-05-15T12:00:00.000Z', '2026-05-15T12:00:00.000Z'),
+  ('usr-ana', 'ana@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d616e61:b377797e7deab68e8a60d7ac87a563b4f67287e1f55f5a1d7a240ab004b005d6626231b8327a170994dee13b784c605f898d1dfdfcda68e79803cecd1bb6e36d', 'Ana Paula', 'anapaula', NULL, 'grime', '2026-05-15T12:00:00.000Z', '2026-05-15T12:00:00.000Z'),
+  ('usr-pedro', 'pedro@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d706564726f:0b8098008b2eeb7e088d38745a557341b7e37eb036ca4f71badbd79d48969ed7c1a1409a5dc4c120f04abda5d3472f2e4a8c3050188c2fae11319d6c14c552b5', 'Pedro Martins', 'pedrom', NULL, 'grime', '2026-05-15T12:00:00.000Z', '2026-05-15T12:00:00.000Z'),
+  ('usr-rafa', 'rafa@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d72616661:085c3cdbe52aeb1c107dc40b9d2fdf059466208412cd947fe79d8b9c6914da2a2e5a092b02839a94927c460a888ad283d124d2a730957e29b8afad83d674995d', 'Rafa Brito', 'rafab', NULL, 'grime', '2026-04-01T12:00:00.000Z', '2026-04-01T12:00:00.000Z'),
+  ('usr-beto', 'beto@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d6265746f:fddf7f98850f51bf18551d4a1952cd8e0f27a4141315540a977fabbfc6f1410960fa923dc96ac4faab77df96c1db85f87f7f94e3bc1fbb9221e989a1a3cdbfa4', 'Beto Alves', 'betoalves', NULL, 'grime', '2026-04-01T12:10:00.000Z', '2026-04-01T12:10:00.000Z'),
+  ('usr-lucas', 'lucas@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d6c75636173:a913628dd1eb81807581f6f747e2684311f52fa0af2077f7c8219d8d7ba82565b54408d8d027e4dd75bb5882bc84eaf144404f2ad177bc6b4626f21e2c5b2720', 'Lucas Dias', 'lucasd', NULL, 'grime', '2026-05-05T12:00:00.000Z', '2026-05-05T12:00:00.000Z'),
+  ('usr-lara', 'lara@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d6c617261:ec61ac1562114efd0ed6ef3d14ebbff586ed034662ca787b72dcc46d1ed84b3e3d6eb984d765ec576884e24e4fda9fc807238d78e309e908fde6928568ba2821', 'Lara Costa', 'larac', NULL, 'grime', '2026-05-05T12:15:00.000Z', '2026-05-05T12:15:00.000Z'),
+  ('usr-clara', 'clara@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d636c617261:35fe99521833723ea1a4e96e7845d2fdfcff36254f9a649e8b29ddb29faaa2dfd4aca2beb145fc2ad74cef958fd422255cfa03b5e5a4e12638c6f8a3bda59e94', 'Clara Mendes', 'claram', NULL, 'grime', '2026-03-31T12:00:00.000Z', '2026-03-31T12:00:00.000Z'),
+  ('usr-diego', 'diego@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d646965676f:25675a9abf243a1502073cd47a9928203adb7eacb3daab1b4ed2547650b114459ebd5839506365ad2272d284d770bb50b38d2de9467a73a9fc104cafe97dbd64', 'Diego Freitas', 'diegof', NULL, 'grime', '2026-03-31T12:08:00.000Z', '2026-03-31T12:08:00.000Z');
+
+INSERT INTO communities (
+  id,
+  name,
+  slug,
+  description,
+  privacy,
+  creator_id,
+  created_at,
+  updated_at
+) VALUES
+  (
+    'com-republica-404',
+    'República 404',
+    'republica-404',
+    'Acordos domésticos com rigor desnecessário.',
+    'private',
+    'usr-marcos',
+    '2026-05-02T12:00:00.000Z',
+    '2026-05-02T12:00:00.000Z'
+  ),
+  (
+    'com-desafios-de-domingo',
+    'Desafios de Domingo',
+    'desafios-de-domingo',
+    'Comunidade pública para desafios leves, apostas bobas e placares dramáticos.',
+    'public',
+    'usr-julia',
+    '2026-05-03T12:00:00.000Z',
+    '2026-05-03T12:00:00.000Z'
+  ),
+  (
+    'com-cine-tribunal',
+    'Cine Tribunal',
+    'cine-tribunal',
+    'Sessões culturais com direito a defesa, réplica e consequência.',
+    'public',
+    'usr-rafa',
+    '2026-05-04T12:00:00.000Z',
+    '2026-05-04T12:00:00.000Z'
+  );
+
+INSERT INTO community_memberships (
+  id,
+  community_id,
+  user_id,
+  role,
+  status,
+  requested_at,
+  decided_at,
+  created_at,
+  updated_at
+) VALUES
+  ('mem-republica-marcos', 'com-republica-404', 'usr-marcos', 'creator', 'member', '2026-05-02T12:00:00.000Z', '2026-05-02T12:00:00.000Z', '2026-05-02T12:00:00.000Z', '2026-05-02T12:00:00.000Z'),
+  ('mem-republica-julia', 'com-republica-404', 'usr-julia', 'admin', 'member', '2026-05-02T12:05:00.000Z', '2026-05-02T12:05:00.000Z', '2026-05-02T12:05:00.000Z', '2026-05-02T12:05:00.000Z'),
+  ('mem-republica-carlos', 'com-republica-404', 'usr-carlos', 'member', 'pending', '2026-05-06T12:00:00.000Z', NULL, '2026-05-06T12:00:00.000Z', '2026-05-06T12:00:00.000Z'),
+  ('mem-domingo-julia', 'com-desafios-de-domingo', 'usr-julia', 'creator', 'member', '2026-05-03T12:00:00.000Z', '2026-05-03T12:00:00.000Z', '2026-05-03T12:00:00.000Z', '2026-05-03T12:00:00.000Z'),
+  ('mem-domingo-marcos', 'com-desafios-de-domingo', 'usr-marcos', 'member', 'member', '2026-05-03T12:10:00.000Z', '2026-05-03T12:10:00.000Z', '2026-05-03T12:10:00.000Z', '2026-05-03T12:10:00.000Z'),
+  ('mem-cine-rafa', 'com-cine-tribunal', 'usr-rafa', 'creator', 'member', '2026-05-04T12:00:00.000Z', '2026-05-04T12:00:00.000Z', '2026-05-04T12:00:00.000Z', '2026-05-04T12:00:00.000Z'),
+  ('mem-cine-beto', 'com-cine-tribunal', 'usr-beto', 'admin', 'member', '2026-05-04T12:15:00.000Z', '2026-05-04T12:15:00.000Z', '2026-05-04T12:15:00.000Z', '2026-05-04T12:15:00.000Z');
 
 INSERT INTO trattos (
   id,
@@ -119,6 +207,66 @@ INSERT INTO tratto_participants (
   ('trt-0005-clara', 'trt-0005', 'Clara Mendes', 'creator', 'accepted', '2026-03-31T12:00:00.000Z', '2026-03-31T12:00:00.000Z'),
   ('trt-0005-diego', 'trt-0005', 'Diego Freitas', 'participant', 'accepted', '2026-03-31T12:08:00.000Z', '2026-03-31T12:00:00.000Z');
 
+UPDATE tratto_participants
+SET user_id = CASE id
+    WHEN 'trt-0001-marcos' THEN 'usr-marcos'
+    WHEN 'trt-0001-julia' THEN 'usr-julia'
+    WHEN 'trt-0002-carlos' THEN 'usr-carlos'
+    WHEN 'trt-0002-ana' THEN 'usr-ana'
+    WHEN 'trt-0002-pedro' THEN 'usr-pedro'
+    WHEN 'trt-0003-rafa' THEN 'usr-rafa'
+    WHEN 'trt-0003-beto' THEN 'usr-beto'
+    WHEN 'trt-0004-lucas' THEN 'usr-lucas'
+    WHEN 'trt-0004-lara' THEN 'usr-lara'
+    WHEN 'trt-0005-clara' THEN 'usr-clara'
+    WHEN 'trt-0005-diego' THEN 'usr-diego'
+  END,
+  invited_by_user_id = CASE
+    WHEN role = 'creator' THEN NULL
+    WHEN tratto_id = 'trt-0001' THEN 'usr-marcos'
+    WHEN tratto_id = 'trt-0002' THEN 'usr-carlos'
+    WHEN tratto_id = 'trt-0003' THEN 'usr-rafa'
+    WHEN tratto_id = 'trt-0004' THEN 'usr-lucas'
+    WHEN tratto_id = 'trt-0005' THEN 'usr-clara'
+  END,
+  invited_at = created_at
+WHERE id IN (
+  'trt-0001-marcos',
+  'trt-0001-julia',
+  'trt-0002-carlos',
+  'trt-0002-ana',
+  'trt-0002-pedro',
+  'trt-0003-rafa',
+  'trt-0003-beto',
+  'trt-0004-lucas',
+  'trt-0004-lara',
+  'trt-0005-clara',
+  'trt-0005-diego'
+);
+
+UPDATE trattos
+SET creator_id = CASE id
+    WHEN 'trt-0001' THEN 'usr-marcos'
+    WHEN 'trt-0002' THEN 'usr-carlos'
+    WHEN 'trt-0003' THEN 'usr-rafa'
+    WHEN 'trt-0004' THEN 'usr-lucas'
+    WHEN 'trt-0005' THEN 'usr-clara'
+  END,
+  community_id = CASE id
+    WHEN 'trt-0001' THEN 'com-republica-404'
+    WHEN 'trt-0002' THEN 'com-desafios-de-domingo'
+    WHEN 'trt-0003' THEN 'com-cine-tribunal'
+    ELSE NULL
+  END,
+  rules_json = CASE id
+    WHEN 'trt-0001' THEN '[{"id":"rule-1","text":"Os pães de queijo precisam ser de tamanho normal.","position":1},{"id":"rule-2","text":"Não vale intervalo maior que dois minutos.","position":2},{"id":"rule-3","text":"As duas partes precisam estar presentes.","position":3},{"id":"rule-4","text":"Miniaturas não serão aceitas como prova.","position":4}]'
+    WHEN 'trt-0002' THEN '[{"id":"rule-1","text":"O tempo precisa vir de aplicativo de corrida.","position":1},{"id":"rule-2","text":"Percurso sem descida absurda.","position":2},{"id":"rule-3","text":"A prova deve ser enviada em até dez minutos.","position":3}]'
+    WHEN 'trt-0003' THEN '[{"id":"rule-1","text":"Assistir ao filme inteiro, sem pular cenas.","position":1},{"id":"rule-2","text":"Enviar três comentários durante a sessão.","position":2},{"id":"rule-3","text":"Aceitar julgamento público por 48 horas.","position":3}]'
+    WHEN 'trt-0004' THEN '[{"id":"rule-1","text":"Somente HTML, CSS e JavaScript.","position":1},{"id":"rule-2","text":"O cronômetro começa com o editor aberto.","position":2},{"id":"rule-3","text":"Precisa ter movimento, comida, pontuação e fim de jogo.","position":3}]'
+    WHEN 'trt-0005' THEN '[{"id":"rule-1","text":"Sem açúcar adicionado.","position":1},{"id":"rule-2","text":"Frutas liberadas.","position":2},{"id":"rule-3","text":"Diário alimentar obrigatório.","position":3},{"id":"rule-4","text":"Fiscalizações por chamada podem ocorrer.","position":4}]'
+  END
+WHERE id IN ('trt-0001', 'trt-0002', 'trt-0003', 'trt-0004', 'trt-0005');
+
 INSERT INTO evidences (
   id,
   tratto_id,
@@ -137,6 +285,19 @@ INSERT INTO evidences (
   ('ev-007', 'trt-0005', 'trt-0005-diego', 'Diego Freitas', 'text', 'Dia 3. Encarei um brigadeiro por 20 minutos. Não houve contato físico.', '2026-04-03T21:00:00.000Z'),
   ('ev-008', 'trt-0005', 'trt-0005-clara', 'Clara Mendes', 'text', 'Dia 30 confirmado. Diego cumpriu. Estou surpresa e juridicamente satisfeita.', '2026-04-30T23:59:00.000Z');
 
+UPDATE evidences
+SET author_user_id = CASE id
+    WHEN 'ev-001' THEN 'usr-marcos'
+    WHEN 'ev-002' THEN 'usr-julia'
+    WHEN 'ev-003' THEN 'usr-rafa'
+    WHEN 'ev-004' THEN 'usr-beto'
+    WHEN 'ev-005' THEN 'usr-lucas'
+    WHEN 'ev-006' THEN 'usr-lara'
+    WHEN 'ev-007' THEN 'usr-diego'
+    WHEN 'ev-008' THEN 'usr-clara'
+  END
+WHERE id IN ('ev-001', 'ev-002', 'ev-003', 'ev-004', 'ev-005', 'ev-006', 'ev-007', 'ev-008');
+
 INSERT INTO comments (
   id,
   tratto_id,
@@ -146,6 +307,10 @@ INSERT INTO comments (
   created_at
 ) VALUES
   ('cm-001', 'trt-0001', NULL, 'Beto Lima', 'Solicito acompanhamento médico e ata registrada.', '2026-05-12T10:02:00.000Z');
+
+UPDATE comments
+SET author_user_id = NULL
+WHERE id = 'cm-001';
 
 INSERT INTO tratto_verdicts (
   id,
@@ -176,4 +341,65 @@ INSERT INTO tratto_verdicts (
     NULL,
     'Trato cumprido e arquivado sem recurso.',
     '2026-04-30T23:59:00.000Z'
+  );
+
+INSERT INTO notifications (
+  id,
+  user_id,
+  type,
+  title,
+  body,
+  target_url,
+  read_at,
+  created_at
+) VALUES
+  (
+    'ntf-invite-ana',
+    'usr-ana',
+    'invite',
+    'Convite para Tratto',
+    'Carlos Reis convidou você para o desafio de corrida abaixo de 30 minutos.',
+    '/trattos/trt-0002',
+    NULL,
+    '2026-05-15T12:01:00.000Z'
+  ),
+  (
+    'ntf-evidence-marcos',
+    'usr-marcos',
+    'evidence',
+    'Nova evidência no Tratto',
+    'Julia Souza adicionou uma contraevidência no desafio dos pães de queijo.',
+    '/trattos/trt-0001',
+    NULL,
+    '2026-05-12T09:45:00.000Z'
+  ),
+  (
+    'ntf-verdict-rafa',
+    'usr-rafa',
+    'verdict',
+    'Veredito publicado',
+    'O conselho identificou o perdedor no Tratto do filme clássico.',
+    '/trattos/trt-0003',
+    '2026-04-04T11:00:00.000Z',
+    '2026-04-04T10:01:00.000Z'
+  ),
+  (
+    'ntf-community-julia',
+    'usr-julia',
+    'community_request',
+    'Pedido de entrada na comunidade',
+    'Carlos Reis solicitou entrada na República 404.',
+    '/communities/republica-404',
+    NULL,
+    '2026-05-06T12:00:00.000Z'
+  ),
+  (
+    'ntf-system-marcos',
+    'usr-marcos',
+    'system',
+    'Tratto está chegando',
+    'O prazo do desafio dos pães de queijo termina em breve.',
+    '/trattos/trt-0001',
+    '2026-05-13T08:00:00.000Z',
+    '2026-05-13T07:30:00.000Z'
   );

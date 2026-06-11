@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 
 import { Button } from '@components/common/Button'
 import { EmptyState } from '@components/common/EmptyState'
+import { Field } from '@components/common/Field'
 import { InfoRow } from '@components/common/InfoRow'
 import { ProgressBar } from '@components/common/ProgressBar'
 import { StatusBadge } from '@components/common/StatusBadge'
@@ -15,6 +16,17 @@ import {
   getParticipantNames,
   getTrattoById,
 } from '@/data/mockTrattos'
+import {
+  addEvidence,
+  completeTratto,
+  createVerdict,
+  getTratto,
+  requestJudgment,
+  respondToInvite,
+  uploadEvidence,
+} from '@/services/backend'
+import { environment } from '@/config/environment'
+import { getSession } from '@/services/session'
 
 const evidenceTypeLabels = {
   text: 'Texto',
@@ -22,18 +34,47 @@ const evidenceTypeLabels = {
   link: 'Link',
 }
 
+function resolveEvidenceImageUrl(evidence) {
+  const url = evidence?.metadata?.fileUrl ?? evidence?.metadata?.previewUrl
+  if (!url) {
+    return ''
+  }
+  if (url.startsWith('http') || url.startsWith('data:')) {
+    return url
+  }
+  const base = (environment.apiUrl ?? '').replace(/\/api\/?$/, '')
+  return `${base}${url}`
+}
+
 export function TrattoDetail() {
   const { trattoId } = useParams()
-  const tratto = getTrattoById(trattoId)
+  const fallbackTratto = getTrattoById(trattoId)
+  const [apiTratto, setApiTratto] = useState(null)
+  const tratto = apiTratto ?? fallbackTratto
   const [evidenceType, setEvidenceType] = useState('text')
   const [evidenceText, setEvidenceText] = useState('')
   const [evidencePhoto, setEvidencePhoto] = useState(null)
   const [localEvidence, setLocalEvidence] = useState([])
   const [evidenceFeedback, setEvidenceFeedback] = useState('')
   const [submittedEvidenceId, setSubmittedEvidenceId] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [actionBusy, setActionBusy] = useState(false)
+  const [verdictForm, setVerdictForm] = useState({ winner: '', loser: '', summary: '' })
   const evidencePhotoInputRef = useRef(null)
   const evidenceFeedbackTimeoutRef = useRef(null)
   const localEvidenceCounterRef = useRef(0)
+  const session = getSession()
+  const sessionUserId = session.user?.id
+
+  useEffect(() => {
+    if (!getSession().token) {
+      return
+    }
+
+    getTratto(trattoId)
+      .then(setApiTratto)
+      .catch(() => setApiTratto(null))
+  }, [trattoId])
 
   useEffect(() => {
     return () => window.clearTimeout(evidenceFeedbackTimeoutRef.current)
@@ -49,16 +90,57 @@ export function TrattoDetail() {
     )
   }
 
-  const allEvidence = [...tratto.evidence, ...localEvidence]
+  const allEvidence = [...(tratto.evidence ?? []), ...localEvidence]
   const isOpen = ['active', 'review'].includes(tratto.status)
   const isClosed = ['finished', 'loser-detected', 'cancelled'].includes(tratto.status)
-  const canRequestJudgment =
-    tratto.creatorId === currentUser.id || tratto.judgeUserId === currentUser.id
+  const permissions = tratto.permissions ?? {}
+  const myParticipant = (tratto.participants ?? []).find(
+    (entry) => entry.user?.id && entry.user.id === sessionUserId,
+  )
+  const hasPendingInvite = myParticipant?.inviteStatus === 'pending'
+  const canRequestJudgment = permissions.canRequestJudgment ??
+    (tratto.creatorId === currentUser.id || tratto.judgeUserId === currentUser.id)
+  const canResolveVerdict = Boolean(permissions.canResolveVerdict)
+  const canComplete = Boolean(permissions.canComplete)
+  const resolvableParticipants = (tratto.participants ?? []).filter(
+    (entry) => entry.role !== 'judge',
+  )
 
-  function submitEvidence(event) {
+  async function submitEvidence(event) {
     event.preventDefault()
+    setActionError('')
 
     if (!evidenceText.trim() && !(evidenceType === 'image' && evidencePhoto)) {
+      return
+    }
+
+    if (getSession().token) {
+      try {
+        const data =
+          evidenceType === 'image' && evidencePhoto?.file
+            ? await uploadEvidence(tratto.id, {
+                file: evidencePhoto.file,
+                type: 'image',
+                caption: evidenceText.trim() || undefined,
+              })
+            : await addEvidence(tratto.id, {
+                type: evidenceType,
+                content: evidenceText.trim(),
+              })
+
+        setApiTratto(data.tratto)
+        setEvidenceText('')
+        clearEvidencePhoto()
+        setEvidenceFeedback('Evidência protocolada.')
+        setSubmittedEvidenceId(data.evidence.id)
+        window.clearTimeout(evidenceFeedbackTimeoutRef.current)
+        evidenceFeedbackTimeoutRef.current = window.setTimeout(() => {
+          setEvidenceFeedback('')
+          setSubmittedEvidenceId('')
+        }, 2200)
+      } catch (apiError) {
+        setActionError(apiError.response?.data?.message ?? 'A API recusou a evidência.')
+      }
       return
     }
 
@@ -89,6 +171,73 @@ export function TrattoDetail() {
     }, 2200)
   }
 
+  async function answerInvite(decision) {
+    if (!myParticipant) {
+      return
+    }
+    setActionBusy(true)
+    setActionError('')
+    try {
+      const updated = await respondToInvite(tratto.id, myParticipant.id, decision)
+      setApiTratto(updated)
+    } catch (apiError) {
+      setActionError(apiError.response?.data?.message ?? 'Não foi possível responder ao convite.')
+    } finally {
+      setActionBusy(false)
+    }
+  }
+
+  async function callJudgment() {
+    setActionBusy(true)
+    setActionError('')
+    try {
+      const updated = await requestJudgment(tratto.id)
+      setApiTratto(updated)
+    } catch (apiError) {
+      setActionError(apiError.response?.data?.message ?? 'Não foi possível solicitar julgamento.')
+    } finally {
+      setActionBusy(false)
+    }
+  }
+
+  async function submitVerdict(event) {
+    event.preventDefault()
+
+    if (!verdictForm.winner || !verdictForm.loser) {
+      setActionError('Selecione vencedor e perdedor.')
+      return
+    }
+
+    setActionBusy(true)
+    setActionError('')
+    try {
+      const updated = await createVerdict(tratto.id, {
+        winnerParticipantId: verdictForm.winner,
+        loserParticipantId: verdictForm.loser,
+        summary: verdictForm.summary || undefined,
+      })
+      setApiTratto(updated)
+      setVerdictForm({ winner: '', loser: '', summary: '' })
+    } catch (apiError) {
+      setActionError(apiError.response?.data?.message ?? 'Veredito recusado pela API.')
+    } finally {
+      setActionBusy(false)
+    }
+  }
+
+  async function markComplete() {
+    setActionBusy(true)
+    setActionError('')
+    try {
+      const updated = await completeTratto(tratto.id)
+      setApiTratto(updated)
+    } catch (apiError) {
+      setActionError(apiError.response?.data?.message ?? 'Não foi possível encerrar o trato.')
+    } finally {
+      setActionBusy(false)
+    }
+  }
+
   function clearEvidencePhoto() {
     setEvidencePhoto(null)
     if (evidencePhotoInputRef.current) {
@@ -106,7 +255,7 @@ export function TrattoDetail() {
 
     const reader = new FileReader()
     reader.onload = () => {
-      setEvidencePhoto({ filename: file.name, previewUrl: String(reader.result) })
+      setEvidencePhoto({ file, filename: file.name, previewUrl: String(reader.result) })
     }
     reader.readAsDataURL(file)
   }
@@ -135,6 +284,26 @@ export function TrattoDetail() {
               <ProgressBar label="Andamento do trato" value={tratto.progress} />
           </Panel>
 
+          {hasPendingInvite ? (
+            <Panel
+              subtitle={
+                myParticipant?.role === 'judge'
+                  ? 'Você foi convidado como juiz. Confirme para o trato seguir.'
+                  : 'Convite aguardando sua resposta para o trato ficar ativo.'
+              }
+              title="Convite pendente"
+            >
+              <div className="button-row button-row--stack-mobile">
+                <Button disabled={actionBusy} onClick={() => answerInvite('accepted')} type="button">
+                  Aceitar
+                </Button>
+                <Button disabled={actionBusy} onClick={() => answerInvite('declined')} type="button" variant="ghost">
+                  Recusar
+                </Button>
+              </div>
+            </Panel>
+          ) : null}
+
           {isClosed ? (
             <Panel
               subtitle="Este caso foi arquivado para consultas futuras e eventuais constrangimentos em reuniões de amigos."
@@ -160,7 +329,7 @@ export function TrattoDetail() {
                     >
                       <div className="timeline-item__header">
                         <div>
-                          <p className="section-title">{evidence.author}</p>
+                          <p className="section-title">{evidence.authorName ?? evidence.author?.displayName ?? evidence.author}</p>
                           <p className="muted-label">{evidence.createdAt}</p>
                         </div>
                         <span className="status-badge" data-status="finished">
@@ -168,17 +337,17 @@ export function TrattoDetail() {
                         </span>
                       </div>
                       {evidence.type === 'image' ? (
-                        <div className="evidence-preview" aria-label="Prévia mockada de imagem">
-                          {evidence.metadata?.previewUrl ? (
+                        <div className="evidence-preview">
+                          {resolveEvidenceImageUrl(evidence) ? (
                             <img
-                              alt={`Prévia de ${evidence.metadata.filename}`}
+                              alt={`Prévia de ${evidence.metadata?.originalName ?? evidence.metadata?.filename ?? 'imagem'}`}
                               className="evidence-preview__image"
-                              src={evidence.metadata.previewUrl}
+                              src={resolveEvidenceImageUrl(evidence)}
                             />
                           ) : (
                             <span className="evidence-preview__icon">IMG</span>
                           )}
-                          <span>{evidence.metadata?.filename ?? 'foto-evidencia.png'}</span>
+                          <span>{evidence.metadata?.originalName ?? evidence.metadata?.filename ?? 'foto-evidencia'}</span>
                         </div>
                       ) : null}
                       <p className="timeline-item__content">{evidence.content}</p>
@@ -222,7 +391,7 @@ export function TrattoDetail() {
                       <span>
                         {evidencePhoto
                           ? evidencePhoto.filename
-                          : 'Selecione uma foto local para anexar como prova mockada.'}
+                          : 'Escolha uma imagem (png/jpg/gif/webp, máx 5 MB).'}
                       </span>
                       <Button
                         className="evidence-upload-mock__button"
@@ -276,25 +445,90 @@ export function TrattoDetail() {
           <Panel bodyClassName="stack" title="Regras">
               <ol className="rules-list">
                 {tratto.rules.map((rule) => (
-                  <li key={rule}>{rule}</li>
+                  <li key={typeof rule === 'string' ? rule : rule.id}>{typeof rule === 'string' ? rule : rule.text}</li>
                 ))}
               </ol>
           </Panel>
 
+          {actionError ? <p className="pixel-feedback">{actionError}</p> : null}
+
           {tratto.status === 'active' && canRequestJudgment ? (
-            <Panel
-              bodyClassName="stack"
-              subtitle="Ação mockada. Futuramente enviaremos isso para a rota de votos ou veredito."
-              title="Solicitar julgamento"
-            >
+            <Panel bodyClassName="stack" title="Solicitar julgamento">
                 <div className="button-row button-row--stack-mobile">
-                  <Button type="button">
+                  <Button disabled={actionBusy} onClick={callJudgment} type="button">
                     Chamar veredito
                   </Button>
-                  <Button type="button" variant="ghost">
-                    Estender prazo
-                  </Button>
                 </div>
+            </Panel>
+          ) : null}
+
+          {tratto.status === 'review' && canResolveVerdict ? (
+            <Panel
+              as="form"
+              bodyClassName="form-grid"
+              onSubmit={submitVerdict}
+              subtitle="Registre o resultado oficial. O trato passa para fase de cumprimento."
+              title="Registrar veredito"
+            >
+              <Field label="Vencedor">
+                <select
+                  className="select"
+                  onChange={(event) =>
+                    setVerdictForm((current) => ({ ...current, winner: event.target.value }))
+                  }
+                  value={verdictForm.winner}
+                >
+                  <option value="">Selecione</option>
+                  {resolvableParticipants.map((participant) => (
+                    <option key={participant.id} value={participant.id}>
+                      {participant.displayName}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Perdedor">
+                <select
+                  className="select"
+                  onChange={(event) =>
+                    setVerdictForm((current) => ({ ...current, loser: event.target.value }))
+                  }
+                  value={verdictForm.loser}
+                >
+                  <option value="">Selecione</option>
+                  {resolvableParticipants.map((participant) => (
+                    <option key={participant.id} value={participant.id}>
+                      {participant.displayName}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Resumo (opcional)">
+                <textarea
+                  className="textarea"
+                  onChange={(event) =>
+                    setVerdictForm((current) => ({ ...current, summary: event.target.value }))
+                  }
+                  placeholder="Resumo do veredito para constar nos autos."
+                  value={verdictForm.summary}
+                />
+              </Field>
+              <Button disabled={actionBusy} type="submit">
+                Registrar veredito
+              </Button>
+            </Panel>
+          ) : null}
+
+          {tratto.status === 'compliance' && canComplete ? (
+            <Panel
+              bodyClassName="stack"
+              subtitle="Consequência cumprida. Arquive o trato para constrangimentos futuros."
+              title="Encerrar trato"
+            >
+              <div className="button-row button-row--stack-mobile">
+                <Button disabled={actionBusy} onClick={markComplete} type="button">
+                  Marcar como cumprido
+                </Button>
+              </div>
             </Panel>
           ) : null}
         </aside>

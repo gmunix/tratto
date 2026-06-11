@@ -172,7 +172,7 @@ Optional later columns:
 ## Permissions
 
 - Anonymous users can only call auth routes and health.
-- Authenticated users can read their own dashboard, Trattos where they are creator/participant/judge, public community summaries, their own notifications, and searchable users/communities.
+- Authenticated users can read their own dashboard, Trattos where they are creator/participant/judge, community-linked Trattos where they are an approved community member, public community summaries, their own notifications, and searchable users/communities.
 - Tratto creator can edit a Tratto only while status is `pending`.
 - Creator can request judgment when the Tratto is `active` and the current user is part of the Tratto.
 - Assigned judges can request or resolve judgment for Trattos where they are assigned.
