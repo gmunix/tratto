@@ -6,6 +6,8 @@ DELETE FROM evidences;
 DELETE FROM tratto_verdicts;
 DELETE FROM tratto_participants;
 DELETE FROM trattos;
+DELETE FROM community_memberships;
+DELETE FROM communities;
 DELETE FROM auth_tokens;
 DELETE FROM users;
 
@@ -31,6 +33,66 @@ INSERT INTO users (
   ('usr-lara', 'lara@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d6c617261:ec61ac1562114efd0ed6ef3d14ebbff586ed034662ca787b72dcc46d1ed84b3e3d6eb984d765ec576884e24e4fda9fc807238d78e309e908fde6928568ba2821', 'Lara Costa', 'larac', NULL, 'grime', '2026-05-05T12:15:00.000Z', '2026-05-05T12:15:00.000Z'),
   ('usr-clara', 'clara@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d636c617261:35fe99521833723ea1a4e96e7845d2fdfcff36254f9a649e8b29ddb29faaa2dfd4aca2beb145fc2ad74cef958fd422255cfa03b5e5a4e12638c6f8a3bda59e94', 'Clara Mendes', 'claram', NULL, 'grime', '2026-03-31T12:00:00.000Z', '2026-03-31T12:00:00.000Z'),
   ('usr-diego', 'diego@example.com', 'scrypt:16384:8:1:74726174746f2d736565642d646965676f:25675a9abf243a1502073cd47a9928203adb7eacb3daab1b4ed2547650b114459ebd5839506365ad2272d284d770bb50b38d2de9467a73a9fc104cafe97dbd64', 'Diego Freitas', 'diegof', NULL, 'grime', '2026-03-31T12:08:00.000Z', '2026-03-31T12:08:00.000Z');
+
+INSERT INTO communities (
+  id,
+  name,
+  slug,
+  description,
+  privacy,
+  creator_id,
+  created_at,
+  updated_at
+) VALUES
+  (
+    'com-republica-404',
+    'República 404',
+    'republica-404',
+    'Acordos domésticos com rigor desnecessário.',
+    'private',
+    'usr-marcos',
+    '2026-05-02T12:00:00.000Z',
+    '2026-05-02T12:00:00.000Z'
+  ),
+  (
+    'com-desafios-de-domingo',
+    'Desafios de Domingo',
+    'desafios-de-domingo',
+    'Comunidade pública para desafios leves, apostas bobas e placares dramáticos.',
+    'public',
+    'usr-julia',
+    '2026-05-03T12:00:00.000Z',
+    '2026-05-03T12:00:00.000Z'
+  ),
+  (
+    'com-cine-tribunal',
+    'Cine Tribunal',
+    'cine-tribunal',
+    'Sessões culturais com direito a defesa, réplica e consequência.',
+    'public',
+    'usr-rafa',
+    '2026-05-04T12:00:00.000Z',
+    '2026-05-04T12:00:00.000Z'
+  );
+
+INSERT INTO community_memberships (
+  id,
+  community_id,
+  user_id,
+  role,
+  status,
+  requested_at,
+  decided_at,
+  created_at,
+  updated_at
+) VALUES
+  ('mem-republica-marcos', 'com-republica-404', 'usr-marcos', 'creator', 'member', '2026-05-02T12:00:00.000Z', '2026-05-02T12:00:00.000Z', '2026-05-02T12:00:00.000Z', '2026-05-02T12:00:00.000Z'),
+  ('mem-republica-julia', 'com-republica-404', 'usr-julia', 'admin', 'member', '2026-05-02T12:05:00.000Z', '2026-05-02T12:05:00.000Z', '2026-05-02T12:05:00.000Z', '2026-05-02T12:05:00.000Z'),
+  ('mem-republica-carlos', 'com-republica-404', 'usr-carlos', 'member', 'pending', '2026-05-06T12:00:00.000Z', NULL, '2026-05-06T12:00:00.000Z', '2026-05-06T12:00:00.000Z'),
+  ('mem-domingo-julia', 'com-desafios-de-domingo', 'usr-julia', 'creator', 'member', '2026-05-03T12:00:00.000Z', '2026-05-03T12:00:00.000Z', '2026-05-03T12:00:00.000Z', '2026-05-03T12:00:00.000Z'),
+  ('mem-domingo-marcos', 'com-desafios-de-domingo', 'usr-marcos', 'member', 'member', '2026-05-03T12:10:00.000Z', '2026-05-03T12:10:00.000Z', '2026-05-03T12:10:00.000Z', '2026-05-03T12:10:00.000Z'),
+  ('mem-cine-rafa', 'com-cine-tribunal', 'usr-rafa', 'creator', 'member', '2026-05-04T12:00:00.000Z', '2026-05-04T12:00:00.000Z', '2026-05-04T12:00:00.000Z', '2026-05-04T12:00:00.000Z'),
+  ('mem-cine-beto', 'com-cine-tribunal', 'usr-beto', 'admin', 'member', '2026-05-04T12:15:00.000Z', '2026-05-04T12:15:00.000Z', '2026-05-04T12:15:00.000Z', '2026-05-04T12:15:00.000Z');
 
 INSERT INTO trattos (
   id,
