@@ -1,9 +1,15 @@
 import { NavLink } from 'react-router-dom'
 
+import { mockNotifications } from '@/data/mockTrattos'
+
+const unreadNotifications = mockNotifications.filter((notification) => !notification.readAt).length
+
 const navItems = [
   { label: 'Painel', path: '/dashboard', Icon: LayoutGridIcon },
   { label: 'Novo', path: '/novo', Icon: PlusIcon },
-  { label: 'Perfil', path: '/perfil', Icon: UserIcon },
+  { label: 'Comunidades', path: '/comunidades', Icon: CommunityIcon },
+  { label: 'Notificações', path: '/notificacoes', Icon: BellIcon, unread: unreadNotifications },
+  { label: 'Ajustes', path: '/ajustes', Icon: SettingsIcon },
 ]
 
 export function AppLayout({ children }) {
@@ -20,7 +26,10 @@ export function AppLayout({ children }) {
             key={item.path}
             to={item.path}
           >
-            <item.Icon />
+            <span className="bottom-nav__icon-wrap">
+              <item.Icon />
+              {item.unread ? <span className="bottom-nav__dot">{item.unread}</span> : null}
+            </span>
             <span>{item.label}</span>
           </NavLink>
         ))}
@@ -49,11 +58,39 @@ function PlusIcon() {
   )
 }
 
-function UserIcon() {
+function CommunityIcon() {
   return (
     <svg className="bottom-nav__icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M20 21a8 8 0 0 0-16 0" />
-      <circle cx="12" cy="7" r="4" />
+      <path d="M8 21v-6" />
+      <path d="M16 21v-6" />
+      <path d="M3 21h18" />
+      <path d="M5 15h14" />
+      <path d="M7 15V7l5-4 5 4v8" />
+    </svg>
+  )
+}
+
+function BellIcon() {
+  return (
+    <svg className="bottom-nav__icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+      <path d="M10 21h4" />
+    </svg>
+  )
+}
+
+function SettingsIcon() {
+  return (
+    <svg className="bottom-nav__icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 3v3" />
+      <path d="M12 18v3" />
+      <path d="M3 12h3" />
+      <path d="M18 12h3" />
+      <path d="m5.6 5.6 2.1 2.1" />
+      <path d="m16.3 16.3 2.1 2.1" />
+      <path d="m18.4 5.6-2.1 2.1" />
+      <path d="m7.7 16.3-2.1 2.1" />
+      <circle cx="12" cy="12" r="3" />
     </svg>
   )
 }

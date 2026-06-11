@@ -10,10 +10,10 @@ import { decisionMethodLabels, trattoCategories } from '@/data/mockTrattos'
 const initialForm = {
   title: '',
   description: '',
-  category: trattoCategories[0],
+  category: trattoCategories[0].name,
   participantName: '',
   participants: [],
-  rules: '',
+  rules: [''],
   deadline: '',
   consequence: '',
   decisionMethod: 'mutual',
@@ -34,9 +34,11 @@ export function CreateTratto() {
     form.title &&
       form.deadline &&
       form.consequence &&
+      form.rules.some((rule) => rule.trim()) &&
       form.participants.length > 0 &&
       hasRequiredJudge,
   )
+  const selectedCategory = trattoCategories.find((category) => category.name === form.category)
 
   function updateField(field, value) {
     setForm((currentForm) => ({ ...currentForm, [field]: value }))
@@ -63,6 +65,24 @@ export function CreateTratto() {
     }))
   }
 
+  function updateRule(index, value) {
+    setForm((currentForm) => ({
+      ...currentForm,
+      rules: currentForm.rules.map((rule, ruleIndex) => (ruleIndex === index ? value : rule)),
+    }))
+  }
+
+  function addRule() {
+    setForm((currentForm) => ({ ...currentForm, rules: [...currentForm.rules, ''] }))
+  }
+
+  function removeRule(index) {
+    setForm((currentForm) => ({
+      ...currentForm,
+      rules: currentForm.rules.filter((_, ruleIndex) => ruleIndex !== index),
+    }))
+  }
+
   function handleSubmit(event) {
     event.preventDefault()
 
@@ -75,7 +95,7 @@ export function CreateTratto() {
   if (submitted) {
     return (
       <AppLayout backTo="/dashboard" title="Trato registrado">
-        <PageContainer>
+        <PageContainer className="page-container--center">
           <Panel
             bodyClassName="stack stack--large"
             className="panel--narrow"
@@ -114,7 +134,7 @@ export function CreateTratto() {
 
   return (
     <AppLayout backTo="/dashboard" title="Registrar novo trato">
-      <PageContainer>
+      <PageContainer className="page-container--center">
         <Panel
           as="form"
           bodyClassName="form-grid"
@@ -132,11 +152,12 @@ export function CreateTratto() {
                 value={form.category}
               >
                 {trattoCategories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
+                  <option key={category.id} value={category.name}>
+                    {category.name}
                   </option>
                 ))}
               </select>
+              <p className="field__hint">{selectedCategory?.description}</p>
             </Field>
 
             <Field htmlFor="tratto-title" hint="Obrigatório" label="Título do caso">
@@ -195,14 +216,31 @@ export function CreateTratto() {
               </div>
             </Field>
 
-            <Field htmlFor="tratto-rules" label="Regras combinadas">
-              <textarea
-                className="textarea"
-                id="tratto-rules"
-                onChange={(event) => updateField('rules', event.target.value)}
-                placeholder="Liste regras objetivas. Ambiguidade alimenta recurso."
-                value={form.rules}
-              />
+            <Field label="Regras combinadas">
+              <div className="rule-list">
+                {form.rules.map((rule, index) => (
+                  <div className="rule-row" key={`rule-${index + 1}`}>
+                    <span className="rule-row__number">{index + 1}</span>
+                    <input
+                      className="input"
+                      onChange={(event) => updateRule(index, event.target.value)}
+                      placeholder="Regra objetiva, sem brecha para recurso emocional"
+                      value={rule}
+                    />
+                    <Button
+                      disabled={form.rules.length === 1}
+                      onClick={() => removeRule(index)}
+                      type="button"
+                      variant="ghost"
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                ))}
+                <Button onClick={addRule} type="button" variant="secondary">
+                  Adicionar regra
+                </Button>
+              </div>
             </Field>
 
             <Field htmlFor="tratto-deadline" hint="Obrigatório" label="Prazo final">
