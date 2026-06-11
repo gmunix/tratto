@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { Button } from '@components/common/Button'
@@ -30,7 +30,14 @@ export function TrattoDetail() {
   const [evidencePhoto, setEvidencePhoto] = useState(null)
   const [localEvidence, setLocalEvidence] = useState([])
   const [evidenceFeedback, setEvidenceFeedback] = useState('')
+  const [submittedEvidenceId, setSubmittedEvidenceId] = useState('')
   const evidencePhotoInputRef = useRef(null)
+  const evidenceFeedbackTimeoutRef = useRef(null)
+  const localEvidenceCounterRef = useRef(0)
+
+  useEffect(() => {
+    return () => window.clearTimeout(evidenceFeedbackTimeoutRef.current)
+  }, [])
 
   if (!tratto) {
     return (
@@ -55,10 +62,13 @@ export function TrattoDetail() {
       return
     }
 
+    localEvidenceCounterRef.current += 1
+    const nextEvidenceId = `local-${localEvidenceCounterRef.current}`
+
     setLocalEvidence((currentEvidence) => [
       ...currentEvidence,
       {
-        id: `local-${Date.now()}`,
+        id: nextEvidenceId,
         author: 'Você',
         type: evidenceType,
         content: evidenceText.trim() || 'Imagem anexada para perícia social.',
@@ -71,7 +81,12 @@ export function TrattoDetail() {
     setEvidenceText('')
     clearEvidencePhoto()
     setEvidenceFeedback('Evidência protocolada no arquivo pixelado.')
-    window.setTimeout(() => setEvidenceFeedback(''), 2200)
+    setSubmittedEvidenceId(nextEvidenceId)
+    window.clearTimeout(evidenceFeedbackTimeoutRef.current)
+    evidenceFeedbackTimeoutRef.current = window.setTimeout(() => {
+      setEvidenceFeedback('')
+      setSubmittedEvidenceId('')
+    }, 2200)
   }
 
   function clearEvidencePhoto() {
@@ -128,13 +143,21 @@ export function TrattoDetail() {
           ) : null}
 
           <Panel
-            actions={<span className="muted-label">{allEvidence.length} itens</span>}
+            actions={
+              <span className="muted-label evidence-count" key={allEvidence.length}>
+                {allEvidence.length} itens
+              </span>
+            }
             title="Registro de evidências"
           >
               {allEvidence.length ? (
                 <div className="timeline">
                   {allEvidence.map((evidence) => (
-                    <article className="timeline-item" key={evidence.id}>
+                    <article
+                      className="timeline-item"
+                      data-submitted={evidence.id === submittedEvidenceId}
+                      key={evidence.id}
+                    >
                       <div className="timeline-item__header">
                         <div>
                           <p className="section-title">{evidence.author}</p>
@@ -185,7 +208,7 @@ export function TrattoDetail() {
                   Conteúdo da evidência
                 </label>
                 {evidenceType === 'image' ? (
-                  <div className="evidence-upload-mock">
+                  <div className={`evidence-upload-mock${evidencePhoto ? ' has-preview' : ''}`}>
                     {evidencePhoto?.previewUrl ? (
                       <img
                         alt={`Prévia de ${evidencePhoto.filename}`}
@@ -230,7 +253,12 @@ export function TrattoDetail() {
                 <Button disabled={!evidenceText.trim() && !(evidenceType === 'image' && evidencePhoto)} type="submit">
                   Enviar ao conselho
                 </Button>
-                {evidenceFeedback ? <p className="pixel-feedback">{evidenceFeedback}</p> : null}
+                {evidenceFeedback ? (
+                  <div className="evidence-submit-feedback" aria-live="polite">
+                    <p className="pixel-feedback">{evidenceFeedback}</p>
+                    <span className="case-filed-stamp">Protocolado</span>
+                  </div>
+                ) : null}
             </Panel>
           ) : null}
         </div>
