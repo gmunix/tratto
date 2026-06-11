@@ -113,7 +113,7 @@ function normalizeNullableString(value) {
     return null
   }
 
-  return normalizeString(value)
+  return normalizeString(value) || null
 }
 
 function isHttpUrl(value) {

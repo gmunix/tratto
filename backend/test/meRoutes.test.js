@@ -53,6 +53,18 @@ test('PATCH /api/me updates displayName, slug, and avatarUrl', async () => {
   assert.equal(response.body.user.passwordHash, undefined)
 })
 
+test('PATCH /api/me normalizes blank avatarUrl to null', async () => {
+  const { token } = await registerUser({ email: 'blank-avatar@example.com', slug: 'blank-avatar' })
+
+  const response = await request(app)
+    .patch('/api/me')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ avatarUrl: '   ' })
+    .expect(200)
+
+  assert.equal(response.body.user.avatarUrl, null)
+})
+
 test('PATCH /api/me rejects duplicate slugs', async () => {
   await registerUser({ email: 'owner@example.com', slug: 'taken-slug' })
   const { token } = await registerUser({ email: 'other@example.com', slug: 'other-user' })
@@ -64,6 +76,31 @@ test('PATCH /api/me rejects duplicate slugs', async () => {
     .expect(409)
 
   assert.equal(response.body.fields.slug, 'already_in_use')
+})
+
+test('PATCH /api/me translates database slug conflicts into 409 responses', async () => {
+  const { token } = await registerUser({ email: 'race-update@example.com', slug: 'race-update' })
+
+  db.prepare(
+    `CREATE TEMP TRIGGER me_test_slug_conflict
+    BEFORE UPDATE ON users
+    WHEN NEW.slug = 'race-slug-user'
+    BEGIN
+      SELECT RAISE(ABORT, 'UNIQUE constraint failed: users.slug');
+    END`,
+  ).run()
+
+  try {
+    const response = await request(app)
+      .patch('/api/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ slug: 'race-slug-user' })
+      .expect(409)
+
+    assert.equal(response.body.fields.slug, 'already_in_use')
+  } finally {
+    db.prepare('DROP TRIGGER me_test_slug_conflict').run()
+  }
 })
 
 test('PATCH /api/me/theme rejects invalid themes', async () => {
