@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+
 import { Button } from '@components/common/Button'
 import { EmptyState } from '@components/common/EmptyState'
 import { StatCard } from '@components/common/StatCard'
@@ -6,15 +8,37 @@ import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
 import { TrattoCard } from '@components/features/trattos/TrattoCard'
 import { mockNotifications, mockTrattos, userProfile } from '@/data/mockTrattos'
+import { getDashboardData } from '@/services/backend'
+import { getSession } from '@/services/session'
 
 export function Dashboard() {
-  const activeTrattos = mockTrattos.filter((tratto) => tratto.status === 'active')
-  const pendingTrattos = mockTrattos.filter((tratto) => tratto.status === 'pending')
-  const reviewTrattos = mockTrattos.filter((tratto) => tratto.status === 'review')
-  const closedTrattos = mockTrattos.filter((tratto) =>
+  const [trattos, setTrattos] = useState(mockTrattos)
+  const [notifications, setNotifications] = useState(mockNotifications)
+  const [stats, setStats] = useState(null)
+  const [source, setSource] = useState('mock')
+
+  useEffect(() => {
+    if (!getSession().token) {
+      return
+    }
+
+    getDashboardData()
+      .then((data) => {
+        setTrattos(data.trattos)
+        setNotifications(data.notifications)
+        setStats(data.stats)
+        setSource('api')
+      })
+      .catch(() => setSource('mock'))
+  }, [])
+
+  const activeTrattos = trattos.filter((tratto) => tratto.status === 'active')
+  const pendingTrattos = trattos.filter((tratto) => tratto.status === 'pending')
+  const reviewTrattos = trattos.filter((tratto) => tratto.status === 'review')
+  const closedTrattos = trattos.filter((tratto) =>
     ['finished', 'loser-detected', 'cancelled'].includes(tratto.status),
   )
-  const notificationsPreview = mockNotifications.slice(0, 3)
+  const notificationsPreview = notifications.slice(0, 3)
 
   return (
     <AppLayout
@@ -26,9 +50,10 @@ export function Dashboard() {
       title="Painel de controle"
     >
       <PageContainer className="stack stack--large">
+        {source === 'api' ? <p className="pixel-feedback">Dados sincronizados com a API.</p> : null}
         <section className="stats-grid">
-          <StatCard label="Vitórias" tone="success" value={userProfile.wins} />
-          <StatCard label="Derrotas" tone="danger" value={userProfile.losses} />
+          <StatCard label="Vitórias" tone="success" value={stats?.wins ?? userProfile.wins} />
+          <StatCard label="Derrotas" tone="danger" value={stats?.losses ?? userProfile.losses} />
           <StatCard label="Ativos" tone="accent" value={activeTrattos.length} />
           <StatCard label="Pendências" tone="warning" value={pendingTrattos.length + reviewTrattos.length} />
         </section>

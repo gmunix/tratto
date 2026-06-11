@@ -1,18 +1,41 @@
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 
-import {
-  getUnreadNotificationCount,
-  subscribeToMockNotificationState,
-} from '@/data/mockNotificationState'
+import { getUnreadNotificationCount, subscribeToMockNotificationState } from '@/data/mockNotificationState'
+import { getNotifications } from '@/services/backend'
+import { getSession, subscribeToSession } from '@/services/session'
 
 export function AppLayout({ children }) {
   const [unreadNotifications, setUnreadNotifications] = useState(getUnreadNotificationCount)
 
   useEffect(() => {
-    return subscribeToMockNotificationState(() => {
+    async function refreshUnreadCount() {
+      if (!getSession().token) {
+        setUnreadNotifications(getUnreadNotificationCount())
+        return
+      }
+
+      try {
+        const data = await getNotifications()
+        setUnreadNotifications(data.unreadCount)
+      } catch {
+        setUnreadNotifications(getUnreadNotificationCount())
+      }
+    }
+
+    const unsubscribeMock = subscribeToMockNotificationState(() => {
       setUnreadNotifications(getUnreadNotificationCount())
     })
+    const unsubscribeSession = subscribeToSession(refreshUnreadCount)
+    window.addEventListener('tratto-notifications-changed', refreshUnreadCount)
+
+    refreshUnreadCount()
+
+    return () => {
+      unsubscribeMock()
+      unsubscribeSession()
+      window.removeEventListener('tratto-notifications-changed', refreshUnreadCount)
+    }
   }, [])
 
   const navItems = [
