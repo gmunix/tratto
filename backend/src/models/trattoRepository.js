@@ -52,6 +52,17 @@ export function findVisibleTrattoById(id, userId, { db = defaultDb } = {}) {
   return hydrateTrattos(rows, { db, includeDetail: true })[0] ?? null
 }
 
+export function findTrattoById(id, { db = defaultDb } = {}) {
+  const rows = db
+    .prepare(
+      `${trattoSelectSql()}
+      WHERE trattos.id = @id`,
+    )
+    .all({ id })
+
+  return hydrateTrattos(rows, { db, includeDetail: true })[0] ?? null
+}
+
 export function createTratto(input, creator, { db = defaultDb, now = new Date().toISOString() } = {}) {
   const id = randomUUID()
   const caseNumber = nextCaseNumber(db)
@@ -138,6 +149,47 @@ export function createTratto(input, creator, { db = defaultDb, now = new Date().
   create()
 
   return findVisibleTrattoById(id, creator.id, { db })
+}
+
+export function createEvidenceForTratto(
+  trattoId,
+  input,
+  currentUser,
+  currentParticipant,
+  { db = defaultDb, now = new Date().toISOString() } = {},
+) {
+  const id = randomUUID()
+
+  db.prepare(
+    `INSERT INTO evidences (
+      id,
+      tratto_id,
+      author_participant_id,
+      author_display_name,
+      type,
+      content,
+      metadata_json,
+      author_user_id,
+      created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    id,
+    trattoId,
+    currentParticipant.id,
+    currentUser.displayName,
+    input.type,
+    input.content,
+    input.metadata ? JSON.stringify(input.metadata) : null,
+    currentUser.id,
+    now,
+  )
+
+  const tratto = findVisibleTrattoById(trattoId, currentUser.id, { db })
+
+  return {
+    evidence: tratto.evidence.find((item) => item.id === id),
+    tratto,
+  }
 }
 
 export function userHasApprovedCommunityMembership(communityId, userId, { db = defaultDb } = {}) {

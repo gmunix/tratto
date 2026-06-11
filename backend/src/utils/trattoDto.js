@@ -73,7 +73,7 @@ function toParticipantDto(participant) {
   }
 }
 
-function toEvidenceDto(evidence) {
+export function toEvidenceDto(evidence) {
   return {
     id: evidence.id,
     author: toPublicUserDto(evidence.author),
@@ -133,7 +133,7 @@ function buildPermissions(tratto, currentUserId) {
 
   return {
     canEdit: isCreator && tratto.status === 'pending',
-    canAddEvidence: isAcceptedParticipant && ['active', 'review'].includes(tratto.status),
+    canAddEvidence: participantCanAct && ['active', 'review'].includes(tratto.status),
     canRequestJudgment,
     canVote: participantCanAct && tratto.decisionMethod === 'vote' && ['active', 'review'].includes(tratto.status),
     canResolveVerdict: isJudge && tratto.decisionMethod === 'judge' && tratto.status === 'review',

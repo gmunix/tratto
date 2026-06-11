@@ -1,13 +1,16 @@
 import { db } from '../database/connection.js'
+import { createNotifications } from '../models/notificationRepository.js'
 import { findUserBySlug } from '../models/userRepository.js'
 import {
+  createEvidenceForTratto,
   createTratto,
+  findTrattoById,
   findVisibleTrattoById,
   listVisibleTrattosForUser,
   userHasApprovedCommunityMembership,
 } from '../models/trattoRepository.js'
 import { conflictError, httpError, validationError } from '../utils/httpErrors.js'
-import { toTrattoDetailDto, toTrattoSummaryDto } from '../utils/trattoDto.js'
+import { toEvidenceDto, toTrattoDetailDto, toTrattoSummaryDto } from '../utils/trattoDto.js'
 
 const statuses = new Set([
   'pending',
@@ -19,6 +22,7 @@ const statuses = new Set([
   'compliance',
 ])
 const decisionMethods = new Set(['mutual', 'vote', 'judge'])
+const evidenceTypes = new Set(['text', 'link', 'image', 'file'])
 
 export function listTrattos(request, response, next) {
   try {
@@ -72,6 +76,35 @@ export function createTrattoRoute(request, response, next) {
 
     return response.status(201).json({
       tratto: toTrattoDetailDto(tratto, request.user.id),
+    })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+export function addEvidence(request, response, next) {
+  try {
+    const input = validateEvidenceInput(request.body)
+    const tratto = findTrattoById(request.params.id)
+
+    if (!tratto) {
+      throw httpError(404, 'Tratto not found', 'NOT_FOUND')
+    }
+
+    const currentParticipant = findEvidenceParticipant(tratto, request.user.id)
+    enforceEvidenceRules(tratto, currentParticipant)
+
+    const result = db.transaction(() => {
+      const created = createEvidenceForTratto(tratto.id, input, request.user, currentParticipant, { db })
+      const notifications = buildEvidenceNotifications(created.tratto, request.user)
+      createNotifications(notifications, { db })
+
+      return created
+    })()
+
+    return response.status(201).json({
+      evidence: toEvidenceDto(result.evidence),
+      tratto: toTrattoDetailDto(result.tratto, request.user.id),
     })
   } catch (error) {
     return next(error)
@@ -164,6 +197,75 @@ function validateCreateInput(body) {
     communityId,
     rules,
   }
+}
+
+function validateEvidenceInput(body) {
+  const fields = {}
+  const type = normalizeString(body?.type)
+  const content = normalizeString(body?.content)
+  const metadata = body?.metadata ?? null
+
+  if (!evidenceTypes.has(type)) {
+    fields.type = 'invalid'
+  }
+
+  if (!content) {
+    fields.content = 'required'
+  }
+
+  if (metadata !== null && (!isPlainObject(metadata) || Array.isArray(metadata))) {
+    fields.metadata = 'invalid'
+  }
+
+  if (Object.keys(fields).length > 0) {
+    throw validationError('Invalid evidence data', fields)
+  }
+
+  return { type, content, metadata }
+}
+
+function findEvidenceParticipant(tratto, userId) {
+  return tratto.participants.find((participant) => participant.user?.id === userId) ?? null
+}
+
+function enforceEvidenceRules(tratto, currentParticipant) {
+  if (!['active', 'review'].includes(tratto.status)) {
+    throw conflictError('Evidence can only be added to active or review Trattos', {
+      status: 'invalid_state',
+    })
+  }
+
+  if (
+    !currentParticipant ||
+    currentParticipant.inviteStatus !== 'accepted' ||
+    !['creator', 'participant'].includes(currentParticipant.role)
+  ) {
+    throw httpError(403, 'Only accepted participants can add evidence', 'FORBIDDEN', {
+      participant: 'required',
+    })
+  }
+}
+
+function buildEvidenceNotifications(tratto, currentUser) {
+  const recipientIds = new Set()
+
+  for (const participant of tratto.participants) {
+    if (
+      participant.user?.id &&
+      participant.user.id !== currentUser.id &&
+      participant.inviteStatus === 'accepted'
+    ) {
+      recipientIds.add(participant.user.id)
+    }
+  }
+
+  return [...recipientIds].map((userId) => ({
+    userId,
+    type: 'evidence',
+    title: 'Nova evidência no Tratto',
+    body: `${currentUser.displayName} adicionou uma evidência em "${tratto.title}".`,
+    targetUrl: `/trattos/${tratto.id}`,
+  }))
 }
 
 function resolveUsers(slugs, fieldName) {
@@ -288,6 +390,10 @@ function isSlug(value) {
 function hasDuplicateDisplayNames(users) {
   const displayNames = users.map((user) => normalizeString(user.displayName).toLowerCase())
   return new Set(displayNames).size !== displayNames.length
+}
+
+function isPlainObject(value) {
+  return typeof value === 'object' && value !== null && value.constructor === Object
 }
 
 function normalizeString(value) {
