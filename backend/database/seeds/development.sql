@@ -206,6 +206,66 @@ INSERT INTO tratto_participants (
   ('trt-0005-clara', 'trt-0005', 'Clara Mendes', 'creator', 'accepted', '2026-03-31T12:00:00.000Z', '2026-03-31T12:00:00.000Z'),
   ('trt-0005-diego', 'trt-0005', 'Diego Freitas', 'participant', 'accepted', '2026-03-31T12:08:00.000Z', '2026-03-31T12:00:00.000Z');
 
+UPDATE tratto_participants
+SET user_id = CASE id
+    WHEN 'trt-0001-marcos' THEN 'usr-marcos'
+    WHEN 'trt-0001-julia' THEN 'usr-julia'
+    WHEN 'trt-0002-carlos' THEN 'usr-carlos'
+    WHEN 'trt-0002-ana' THEN 'usr-ana'
+    WHEN 'trt-0002-pedro' THEN 'usr-pedro'
+    WHEN 'trt-0003-rafa' THEN 'usr-rafa'
+    WHEN 'trt-0003-beto' THEN 'usr-beto'
+    WHEN 'trt-0004-lucas' THEN 'usr-lucas'
+    WHEN 'trt-0004-lara' THEN 'usr-lara'
+    WHEN 'trt-0005-clara' THEN 'usr-clara'
+    WHEN 'trt-0005-diego' THEN 'usr-diego'
+  END,
+  invited_by_user_id = CASE
+    WHEN role = 'creator' THEN NULL
+    WHEN tratto_id = 'trt-0001' THEN 'usr-marcos'
+    WHEN tratto_id = 'trt-0002' THEN 'usr-carlos'
+    WHEN tratto_id = 'trt-0003' THEN 'usr-rafa'
+    WHEN tratto_id = 'trt-0004' THEN 'usr-lucas'
+    WHEN tratto_id = 'trt-0005' THEN 'usr-clara'
+  END,
+  invited_at = created_at
+WHERE id IN (
+  'trt-0001-marcos',
+  'trt-0001-julia',
+  'trt-0002-carlos',
+  'trt-0002-ana',
+  'trt-0002-pedro',
+  'trt-0003-rafa',
+  'trt-0003-beto',
+  'trt-0004-lucas',
+  'trt-0004-lara',
+  'trt-0005-clara',
+  'trt-0005-diego'
+);
+
+UPDATE trattos
+SET creator_id = CASE id
+    WHEN 'trt-0001' THEN 'usr-marcos'
+    WHEN 'trt-0002' THEN 'usr-carlos'
+    WHEN 'trt-0003' THEN 'usr-rafa'
+    WHEN 'trt-0004' THEN 'usr-lucas'
+    WHEN 'trt-0005' THEN 'usr-clara'
+  END,
+  community_id = CASE id
+    WHEN 'trt-0001' THEN 'com-republica-404'
+    WHEN 'trt-0002' THEN 'com-desafios-de-domingo'
+    WHEN 'trt-0003' THEN 'com-cine-tribunal'
+    ELSE NULL
+  END,
+  rules_json = CASE id
+    WHEN 'trt-0001' THEN '[{"id":"rule-1","text":"Os pães de queijo precisam ser de tamanho normal.","position":1},{"id":"rule-2","text":"Não vale intervalo maior que dois minutos.","position":2},{"id":"rule-3","text":"As duas partes precisam estar presentes.","position":3},{"id":"rule-4","text":"Miniaturas não serão aceitas como prova.","position":4}]'
+    WHEN 'trt-0002' THEN '[{"id":"rule-1","text":"O tempo precisa vir de aplicativo de corrida.","position":1},{"id":"rule-2","text":"Percurso sem descida absurda.","position":2},{"id":"rule-3","text":"A prova deve ser enviada em até dez minutos.","position":3}]'
+    WHEN 'trt-0003' THEN '[{"id":"rule-1","text":"Assistir ao filme inteiro, sem pular cenas.","position":1},{"id":"rule-2","text":"Enviar três comentários durante a sessão.","position":2},{"id":"rule-3","text":"Aceitar julgamento público por 48 horas.","position":3}]'
+    WHEN 'trt-0004' THEN '[{"id":"rule-1","text":"Somente HTML, CSS e JavaScript.","position":1},{"id":"rule-2","text":"O cronômetro começa com o editor aberto.","position":2},{"id":"rule-3","text":"Precisa ter movimento, comida, pontuação e fim de jogo.","position":3}]'
+    WHEN 'trt-0005' THEN '[{"id":"rule-1","text":"Sem açúcar adicionado.","position":1},{"id":"rule-2","text":"Frutas liberadas.","position":2},{"id":"rule-3","text":"Diário alimentar obrigatório.","position":3},{"id":"rule-4","text":"Fiscalizações por chamada podem ocorrer.","position":4}]'
+  END
+WHERE id IN ('trt-0001', 'trt-0002', 'trt-0003', 'trt-0004', 'trt-0005');
+
 INSERT INTO evidences (
   id,
   tratto_id,
@@ -224,6 +284,19 @@ INSERT INTO evidences (
   ('ev-007', 'trt-0005', 'trt-0005-diego', 'Diego Freitas', 'text', 'Dia 3. Encarei um brigadeiro por 20 minutos. Não houve contato físico.', '2026-04-03T21:00:00.000Z'),
   ('ev-008', 'trt-0005', 'trt-0005-clara', 'Clara Mendes', 'text', 'Dia 30 confirmado. Diego cumpriu. Estou surpresa e juridicamente satisfeita.', '2026-04-30T23:59:00.000Z');
 
+UPDATE evidences
+SET author_user_id = CASE id
+    WHEN 'ev-001' THEN 'usr-marcos'
+    WHEN 'ev-002' THEN 'usr-julia'
+    WHEN 'ev-003' THEN 'usr-rafa'
+    WHEN 'ev-004' THEN 'usr-beto'
+    WHEN 'ev-005' THEN 'usr-lucas'
+    WHEN 'ev-006' THEN 'usr-lara'
+    WHEN 'ev-007' THEN 'usr-diego'
+    WHEN 'ev-008' THEN 'usr-clara'
+  END
+WHERE id IN ('ev-001', 'ev-002', 'ev-003', 'ev-004', 'ev-005', 'ev-006', 'ev-007', 'ev-008');
+
 INSERT INTO comments (
   id,
   tratto_id,
@@ -233,6 +306,10 @@ INSERT INTO comments (
   created_at
 ) VALUES
   ('cm-001', 'trt-0001', NULL, 'Beto Lima', 'Solicito acompanhamento médico e ata registrada.', '2026-05-12T10:02:00.000Z');
+
+UPDATE comments
+SET author_user_id = NULL
+WHERE id = 'cm-001';
 
 INSERT INTO tratto_verdicts (
   id,
