@@ -41,11 +41,11 @@ export function Home() {
             </div>
 
             <div className="hero__actions">
-              <Button to="/login">
-                Abrir painel
+              <Button to="/registrar">
+                Criar conta
               </Button>
               <Button to="/login" variant="secondary">
-                Registrar trato
+                Entrar
               </Button>
             </div>
 

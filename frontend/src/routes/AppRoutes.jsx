@@ -6,6 +6,7 @@ import { Dashboard } from '@pages/Dashboard'
 import { Home } from '@pages/Home'
 import { Login } from '@pages/Login'
 import { NotFound } from '@pages/NotFound'
+import { Register } from '@pages/Register'
 import { Notifications } from '@pages/Notifications'
 import { Communities } from '@pages/Communities'
 import { CommunityDetail } from '@pages/CommunityDetail'
@@ -22,6 +23,7 @@ export function AppRoutes() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/registrar" element={<Register />} />
         <Route path="/dashboard" element={protectedRoute(<Dashboard />)} />
         <Route path="/novo" element={protectedRoute(<CreateTratto />)} />
         <Route path="/trattos/:trattoId" element={protectedRoute(<TrattoDetail />)} />
