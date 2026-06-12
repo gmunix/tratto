@@ -6,7 +6,7 @@ import { Field } from '@components/common/Field'
 import { AppLayout } from '@components/layout/AppLayout'
 import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
-import { decisionMethodLabels, getCommunityBySlugOrId, trattoCategories } from '@/data/mockTrattos'
+import { decisionMethodLabels, trattoCategories } from '@/data/mockTrattos'
 import { createTratto, getCommunity, searchUsers } from '@/services/backend'
 import { getSession } from '@/services/session'
 
@@ -30,27 +30,45 @@ function createProtocol() {
 
 export function CreateTratto() {
   const [searchParams] = useSearchParams()
-  const fallbackCommunity = getCommunityBySlugOrId(searchParams.get('community'))
   const [form, setForm] = useState(initialForm)
   const [submitted, setSubmitted] = useState(false)
   const [protocol, setProtocol] = useState(createProtocol)
   const [createdTratto, setCreatedTratto] = useState(null)
-  const [apiCommunity, setApiCommunity] = useState(null)
+  const [selectedCommunity, setSelectedCommunity] = useState(null)
   const [error, setError] = useState('')
   const [participantSuggestions, setParticipantSuggestions] = useState([])
   const [judgeSuggestions, setJudgeSuggestions] = useState([])
-  const selectedCommunity = apiCommunity ?? fallbackCommunity
 
   useEffect(() => {
+    let cancelled = false
     const community = searchParams.get('community')
 
-    if (!community || !getSession().token) {
-      return
+    if (!community) {
+      Promise.resolve().then(() => {
+        if (!cancelled) {
+          setSelectedCommunity(null)
+        }
+      })
+      return () => {
+        cancelled = true
+      }
     }
 
     getCommunity(community)
-      .then((data) => setApiCommunity(data.community))
-      .catch(() => setApiCommunity(null))
+      .then((data) => {
+        if (!cancelled) {
+          setSelectedCommunity(data.community)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSelectedCommunity(null)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [searchParams])
 
   useEffect(() => {
@@ -191,35 +209,30 @@ export function CreateTratto() {
   async function handleSubmit(event) {
     event.preventDefault()
 
-    if (canSubmit) {
-      setError('')
+    if (!canSubmit) {
+      return
+    }
 
-      if (getSession().token) {
-        try {
-          const tratto = await createTratto({
-            title: form.title,
-            description: form.description,
-            category: form.category,
-            consequence: form.consequence,
-            deadline: form.deadline,
-            decisionMethod: form.decisionMethod,
-            participantSlugs: form.participants.map((entry) => entry.slug),
-            judgeSlug: form.decisionMethod === 'judge' ? form.judgeResolved?.slug : undefined,
-            communitySlug: selectedCommunity?.slug,
-            rules: form.rules.filter((rule) => rule.trim()),
-          })
-          setCreatedTratto(tratto)
-          setProtocol(tratto.caseNumber)
-          setSubmitted(true)
-          return
-        } catch (apiError) {
-          setError(apiError.response?.data?.message ?? 'A API recusou o protocolo. Revise slugs e regras.')
-          return
-        }
-      }
+    setError('')
 
-      setProtocol(createProtocol())
+    try {
+      const tratto = await createTratto({
+        title: form.title,
+        description: form.description,
+        category: form.category,
+        consequence: form.consequence,
+        deadline: form.deadline,
+        decisionMethod: form.decisionMethod,
+        participantSlugs: form.participants.map((entry) => entry.slug),
+        judgeSlug: form.decisionMethod === 'judge' ? form.judgeResolved?.slug : undefined,
+        communitySlug: selectedCommunity?.slug,
+        rules: form.rules.filter((rule) => rule.trim()),
+      })
+      setCreatedTratto(tratto)
+      setProtocol(tratto.caseNumber)
       setSubmitted(true)
+    } catch (apiError) {
+      setError(apiError.response?.data?.message ?? 'A API recusou o protocolo. Revise slugs e regras.')
     }
   }
 

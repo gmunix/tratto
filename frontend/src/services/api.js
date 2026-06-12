@@ -15,3 +15,20 @@ api.interceptors.request.use((config) => {
 
   return config
 })
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      const isAuthRoute = /\/api\/auth\/(login|register)/.test(error.config?.url ?? '')
+
+      if (!isAuthRoute && window.localStorage.getItem('tratto-auth-token')) {
+        window.localStorage.removeItem('tratto-auth-token')
+        window.localStorage.removeItem('tratto-auth-user')
+        window.dispatchEvent(new Event('tratto-session-expired'))
+      }
+    }
+
+    return Promise.reject(error)
+  },
+)
