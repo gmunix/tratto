@@ -25,6 +25,12 @@ export async function login(email, password) {
   return data
 }
 
+export async function register({ email, password, displayName, slug }) {
+  const { data } = await api.post('/auth/register', { email, password, displayName, slug })
+  saveSession(data.token, data.user)
+  return data
+}
+
 export async function logout() {
   try {
     await api.post('/auth/logout')

@@ -8,8 +8,8 @@ import { login } from '@/services/session'
 
 export function Login() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('marcos@example.com')
-  const [password, setPassword] = useState('Senha123!')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -22,7 +22,7 @@ export function Login() {
       await login(email, password)
       navigate('/dashboard')
     } catch {
-      setError('Credenciais recusadas pelo cartório. Tente o usuário seedado.')
+      setError('E-mail ou senha incorretos.')
     } finally {
       setIsSubmitting(false)
     }
@@ -77,6 +77,9 @@ export function Login() {
 
             <Button disabled={isSubmitting} fullWidth type="submit">
               {isSubmitting ? 'Conferindo ata...' : 'Entrar'}
+            </Button>
+            <Button fullWidth to="/registrar" variant="secondary">
+              Criar conta
             </Button>
             <Button fullWidth to="/" variant="ghost">
               Voltar para a home
