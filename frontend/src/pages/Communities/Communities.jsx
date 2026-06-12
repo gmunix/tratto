@@ -1,45 +1,48 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
+import { AsyncContent } from '@components/common/AsyncContent'
+import { describeApiError } from '@utils/describeApiError'
 import { Button } from '@components/common/Button'
+import { EmptyState } from '@components/common/EmptyState'
 import { AppLayout } from '@components/layout/AppLayout'
 import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
-import { currentUser, getActiveCommunityTrattoCount, mockCommunities } from '@/data/mockTrattos'
 import { getCommunities } from '@/services/backend'
-import { getSession } from '@/services/session'
 
 export function Communities() {
   const [query, setQuery] = useState('')
-  const [apiUserCommunities, setApiUserCommunities] = useState([])
-  const [apiDiscoveryCommunities, setApiDiscoveryCommunities] = useState([])
-  const [source, setSource] = useState('mock')
-  const normalizedQuery = query.trim().toLowerCase()
-  const fallbackUserCommunities =
-    mockCommunities.filter((community) =>
-      community.members.some((member) => member.userId === currentUser.id && member.status === 'member'),
-    )
-  const fallbackDiscoveryCommunities = mockCommunities.filter((community) => {
-    const matchesQuery = `${community.name} ${community.slug}`.toLowerCase().includes(normalizedQuery)
-    return matchesQuery && !fallbackUserCommunities.some((userCommunity) => userCommunity.id === community.id)
-  })
-  const userCommunities = source === 'api' ? apiUserCommunities : fallbackUserCommunities
-  const discoveryCommunities = source === 'api' ? apiDiscoveryCommunities : fallbackDiscoveryCommunities
+  const [userCommunities, setUserCommunities] = useState([])
+  const [discoveryCommunities, setDiscoveryCommunities] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const loadCommunities = useCallback(async (searchQuery) => {
+    try {
+      const data = await getCommunities(searchQuery)
+      setUserCommunities(data.myCommunities)
+      setDiscoveryCommunities(
+        data.communities.filter(
+          (community) => !data.myCommunities.some((userCommunity) => userCommunity.id === community.id),
+        ),
+      )
+      setError('')
+    } catch (apiError) {
+      setError(describeApiError(apiError, 'Não foi possível carregar comunidades.'))
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    if (!getSession().token) {
-      return
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadCommunities(query)
+  }, [loadCommunities, query])
 
-    getCommunities(query)
-      .then((data) => {
-        setApiUserCommunities(data.myCommunities)
-        setApiDiscoveryCommunities(data.communities.filter((community) =>
-          !data.myCommunities.some((userCommunity) => userCommunity.id === community.id),
-        ))
-        setSource('api')
-      })
-      .catch(() => setSource('mock'))
-  }, [query])
+  function retryLoad() {
+    setLoading(true)
+    setError('')
+    loadCommunities(query)
+  }
 
   return (
     <AppLayout title="Comunidades">
@@ -58,33 +61,39 @@ export function Communities() {
           />
         </Panel>
 
-        <CommunitySection communities={userCommunities} source={source} title="Minhas comunidades" />
-        <CommunitySection communities={discoveryCommunities} source={source} title="Descoberta" />
+        <AsyncContent error={error} loading={loading} onRetry={retryLoad}>
+          <CommunitySection communities={userCommunities} emptyMessage="Você ainda não faz parte de nenhuma comunidade." title="Minhas comunidades" />
+          <CommunitySection communities={discoveryCommunities} emptyMessage="Sem comunidades para mostrar." title="Descoberta" />
+        </AsyncContent>
       </PageContainer>
     </AppLayout>
   )
 }
 
-function CommunitySection({ communities, source, title }) {
+function CommunitySection({ communities, emptyMessage, title }) {
   return (
     <Panel title={title}>
-      <div className="community-grid">
-        {communities.map((community) => (
-          <article className="community-card" key={community.id}>
-            <span className="muted-label">/{community.slug}</span>
-            <h2 className="case-card__title">{community.name}</h2>
-            <p className="case-card__description">{community.description}</p>
-            <div className="community-card__meta">
-              <span>{community.privacy === 'public' ? 'Pública' : 'Privada'}</span>
-              <span>{community.memberCount} membros</span>
-              <span>{source === 'api' ? community.activeTrattoCount : getActiveCommunityTrattoCount(community.id)} ativos</span>
-            </div>
-            <Button to={`/comunidades/${community.slug}`} variant="secondary">
-              Abrir comunidade
-            </Button>
-          </article>
-        ))}
-      </div>
+      {communities.length ? (
+        <div className="community-grid">
+          {communities.map((community) => (
+            <article className="community-card" key={community.id}>
+              <span className="muted-label">/{community.slug}</span>
+              <h2 className="case-card__title">{community.name}</h2>
+              <p className="case-card__description">{community.description}</p>
+              <div className="community-card__meta">
+                <span>{community.privacy === 'public' ? 'Pública' : 'Privada'}</span>
+                <span>{community.memberCount} membros</span>
+                <span>{community.activeTrattoCount} ativos</span>
+              </div>
+              <Button to={`/comunidades/${community.slug}`} variant="secondary">
+                Abrir comunidade
+              </Button>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <EmptyState>{emptyMessage}</EmptyState>
+      )}
     </Panel>
   )
 }

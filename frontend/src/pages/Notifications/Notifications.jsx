@@ -1,21 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
+import { AsyncContent } from '@components/common/AsyncContent'
+import { describeApiError } from '@utils/describeApiError'
 import { Button } from '@components/common/Button'
+import { EmptyState } from '@components/common/EmptyState'
 import { AppLayout } from '@components/layout/AppLayout'
 import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
-import {
-  getMockNotifications,
-  markAllMockNotificationsAsRead,
-  markMockNotificationAsRead,
-  subscribeToMockNotificationState,
-} from '@/data/mockNotificationState'
 import {
   getNotifications,
   markAllNotificationsRead,
   markNotificationRead,
 } from '@/services/backend'
-import { getSession } from '@/services/session'
 
 const notificationTypeLabels = {
   invite: 'Convite',
@@ -23,56 +19,56 @@ const notificationTypeLabels = {
   evidence: 'Evidência',
   verdict: 'Veredito',
   'community-request': 'Comunidade',
+  community_request: 'Comunidade',
   system: 'Sistema',
 }
 
 export function Notifications() {
-  const [notifications, setNotifications] = useState(getMockNotifications)
-  const [source, setSource] = useState('mock')
+  const [notifications, setNotifications] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const unreadCount = notifications.filter((notification) => !notification.readAt).length
 
-  useEffect(() => {
-    if (getSession().token) {
-      refreshNotifications()
-    }
-
-    return subscribeToMockNotificationState(() => {
-      if (!getSession().token) {
-        setNotifications(getMockNotifications())
-      }
-    })
-  }, [])
-
-  async function refreshNotifications() {
+  const refreshNotifications = useCallback(async () => {
     try {
       const data = await getNotifications()
       setNotifications(data.notifications)
-      setSource('api')
+      setError('')
       window.dispatchEvent(new Event('tratto-notifications-changed'))
-    } catch {
-      setNotifications(getMockNotifications())
-      setSource('mock')
+    } catch (apiError) {
+      setError(describeApiError(apiError, 'Não foi possível carregar as notificações.'))
+    } finally {
+      setLoading(false)
     }
+  }, [])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    refreshNotifications()
+  }, [refreshNotifications])
+
+  function retryLoad() {
+    setLoading(true)
+    setError('')
+    refreshNotifications()
   }
 
   async function markAsRead(notificationId) {
-    if (source === 'api') {
+    try {
       await markNotificationRead(notificationId)
       await refreshNotifications()
-      return
+    } catch (apiError) {
+      setError(describeApiError(apiError, 'Não foi possível marcar como lida.'))
     }
-
-    markMockNotificationAsRead(notificationId)
   }
 
   async function markAllAsRead() {
-    if (source === 'api') {
+    try {
       await markAllNotificationsRead()
       await refreshNotifications()
-      return
+    } catch (apiError) {
+      setError(describeApiError(apiError, 'Não foi possível atualizar as notificações.'))
     }
-
-    markAllMockNotificationsAsRead()
   }
 
   return (
@@ -80,7 +76,7 @@ export function Notifications() {
       <PageContainer className="stack stack--large">
         <Panel
           actions={
-            <Button disabled={!unreadCount} onClick={markAllAsRead} type="button" variant="secondary">
+            <Button disabled={!unreadCount || loading} onClick={markAllAsRead} type="button" variant="secondary">
               Marcar todas como lidas
             </Button>
           }
@@ -88,41 +84,40 @@ export function Notifications() {
           title="Central de ocorrências"
           titleAs="h1"
         >
-          <div className="notification-list">
-            {notifications.map((notification) => (
-              <article className="notification-card" data-unread={!notification.readAt} key={notification.id}>
-                <div className="case-card__header">
-                  <div className="stack" style={{ gap: 6 }}>
-                    <span className="muted-label">
-                      {notificationTypeLabels[notification.type] ?? notification.type} / {notification.createdAt}
-                    </span>
-                    <h2 className="case-card__title">{notification.title}</h2>
-                  </div>
-                  {!notification.readAt ? <span className="unread-pill">Novo</span> : null}
-                </div>
-                <p className="case-card__description">{notification.body}</p>
-                <div className="button-row button-row--stack-mobile">
-                  <Button to={notification.targetUrl} variant="secondary">
-                    Abrir
-                  </Button>
-                  {!notification.readAt ? (
-                    <Button onClick={() => markAsRead(notification.id)} type="button" variant="ghost">
-                      Marcar como lida
-                    </Button>
-                  ) : null}
-                  {notification.type === 'invite' ? (
-                    <>
-                      <Button type="button">Aceitar</Button>
-                      <Button type="button" variant="ghost">Recusar</Button>
-                    </>
-                  ) : null}
-                  {notification.type === 'community-request' ? (
-                    <Button type="button" variant="ghost">Analisar pedido</Button>
-                  ) : null}
-                </div>
-              </article>
-            ))}
-          </div>
+          <AsyncContent error={error} loading={loading} onRetry={retryLoad}>
+            {notifications.length ? (
+              <div className="notification-list">
+                {notifications.map((notification) => (
+                  <article className="notification-card" data-unread={!notification.readAt} key={notification.id}>
+                    <div className="case-card__header">
+                      <div className="stack" style={{ gap: 6 }}>
+                        <span className="muted-label">
+                          {notificationTypeLabels[notification.type] ?? notification.type} / {notification.createdAt}
+                        </span>
+                        <h2 className="case-card__title">{notification.title}</h2>
+                      </div>
+                      {!notification.readAt ? <span className="unread-pill">Novo</span> : null}
+                    </div>
+                    <p className="case-card__description">{notification.body}</p>
+                    <div className="button-row button-row--stack-mobile">
+                      {notification.targetUrl ? (
+                        <Button to={notification.targetUrl} variant="secondary">
+                          Abrir
+                        </Button>
+                      ) : null}
+                      {!notification.readAt ? (
+                        <Button onClick={() => markAsRead(notification.id)} type="button" variant="ghost">
+                          Marcar como lida
+                        </Button>
+                      ) : null}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <EmptyState>Nada pendente por aqui.</EmptyState>
+            )}
+          </AsyncContent>
         </Panel>
       </PageContainer>
     </AppLayout>

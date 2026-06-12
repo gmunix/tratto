@@ -1163,6 +1163,12 @@ h3 {
   animation: case-filed 700ms steps(4) both;
 }
 
+.async-error {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
 .evidence-submit-feedback {
   position: relative;
   display: grid;

@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
+import { AsyncContent } from '@components/common/AsyncContent'
+import { describeApiError } from '@utils/describeApiError'
 import { Button } from '@components/common/Button'
 import { EmptyState } from '@components/common/EmptyState'
 import { Field } from '@components/common/Field'
@@ -10,12 +12,7 @@ import { StatusBadge } from '@components/common/StatusBadge'
 import { AppLayout } from '@components/layout/AppLayout'
 import { Panel } from '@components/layout/Panel'
 import { PageContainer } from '@components/layout/PageContainer'
-import {
-  currentUser,
-  decisionMethodLabels,
-  getParticipantNames,
-  getTrattoById,
-} from '@/data/mockTrattos'
+import { decisionMethodLabels } from '@/data/mockTrattos'
 import {
   addEvidence,
   completeTratto,
@@ -48,13 +45,12 @@ function resolveEvidenceImageUrl(evidence) {
 
 export function TrattoDetail() {
   const { trattoId } = useParams()
-  const fallbackTratto = getTrattoById(trattoId)
-  const [apiTratto, setApiTratto] = useState(null)
-  const tratto = apiTratto ?? fallbackTratto
+  const [tratto, setTratto] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [evidenceType, setEvidenceType] = useState('text')
   const [evidenceText, setEvidenceText] = useState('')
   const [evidencePhoto, setEvidencePhoto] = useState(null)
-  const [localEvidence, setLocalEvidence] = useState([])
   const [evidenceFeedback, setEvidenceFeedback] = useState('')
   const [submittedEvidenceId, setSubmittedEvidenceId] = useState('')
   const [actionError, setActionError] = useState('')
@@ -62,23 +58,52 @@ export function TrattoDetail() {
   const [verdictForm, setVerdictForm] = useState({ winner: '', loser: '', summary: '' })
   const evidencePhotoInputRef = useRef(null)
   const evidenceFeedbackTimeoutRef = useRef(null)
-  const localEvidenceCounterRef = useRef(0)
   const session = getSession()
   const sessionUserId = session.user?.id
 
-  useEffect(() => {
-    if (!getSession().token) {
-      return
+  const loadTratto = useCallback(async () => {
+    try {
+      const data = await getTratto(trattoId)
+      setTratto(data)
+      setLoadError('')
+    } catch (apiError) {
+      if (apiError.response?.status === 404) {
+        setTratto(null)
+        setLoadError('')
+      } else {
+        setLoadError(describeApiError(apiError, 'Não foi possível carregar o trato.'))
+      }
+    } finally {
+      setLoading(false)
     }
-
-    getTratto(trattoId)
-      .then(setApiTratto)
-      .catch(() => setApiTratto(null))
   }, [trattoId])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadTratto()
+  }, [loadTratto])
+
+  function retryLoad() {
+    setLoading(true)
+    setLoadError('')
+    loadTratto()
+  }
 
   useEffect(() => {
     return () => window.clearTimeout(evidenceFeedbackTimeoutRef.current)
   }, [])
+
+  if (loading || loadError) {
+    return (
+      <AppLayout backTo="/dashboard" title="Carregando trato">
+        <PageContainer>
+          <AsyncContent error={loadError} loading={loading} onRetry={retryLoad}>
+            <span />
+          </AsyncContent>
+        </PageContainer>
+      </AppLayout>
+    )
+  }
 
   if (!tratto) {
     return (
@@ -90,7 +115,7 @@ export function TrattoDetail() {
     )
   }
 
-  const allEvidence = [...(tratto.evidence ?? []), ...localEvidence]
+  const allEvidence = tratto.evidence ?? []
   const isOpen = ['active', 'review'].includes(tratto.status)
   const isClosed = ['finished', 'loser-detected', 'cancelled'].includes(tratto.status)
   const permissions = tratto.permissions ?? {}
@@ -98,13 +123,14 @@ export function TrattoDetail() {
     (entry) => entry.user?.id && entry.user.id === sessionUserId,
   )
   const hasPendingInvite = myParticipant?.inviteStatus === 'pending'
-  const canRequestJudgment = permissions.canRequestJudgment ??
-    (tratto.creatorId === currentUser.id || tratto.judgeUserId === currentUser.id)
+  const canRequestJudgment = Boolean(permissions.canRequestJudgment)
   const canResolveVerdict = Boolean(permissions.canResolveVerdict)
   const canComplete = Boolean(permissions.canComplete)
   const resolvableParticipants = (tratto.participants ?? []).filter(
     (entry) => entry.role !== 'judge',
   )
+  const participantNames = tratto.participantNames
+    ?? (tratto.participants ?? []).map((entry) => entry.displayName)
 
   async function submitEvidence(event) {
     event.preventDefault()
@@ -114,61 +140,32 @@ export function TrattoDetail() {
       return
     }
 
-    if (getSession().token) {
-      try {
-        const data =
-          evidenceType === 'image' && evidencePhoto?.file
-            ? await uploadEvidence(tratto.id, {
-                file: evidencePhoto.file,
-                type: 'image',
-                caption: evidenceText.trim() || undefined,
-              })
-            : await addEvidence(tratto.id, {
-                type: evidenceType,
-                content: evidenceText.trim(),
-              })
+    try {
+      const data =
+        evidenceType === 'image' && evidencePhoto?.file
+          ? await uploadEvidence(tratto.id, {
+              file: evidencePhoto.file,
+              type: 'image',
+              caption: evidenceText.trim() || undefined,
+            })
+          : await addEvidence(tratto.id, {
+              type: evidenceType,
+              content: evidenceText.trim(),
+            })
 
-        setApiTratto(data.tratto)
-        setEvidenceText('')
-        clearEvidencePhoto()
-        setEvidenceFeedback('Evidência protocolada.')
-        setSubmittedEvidenceId(data.evidence.id)
-        window.clearTimeout(evidenceFeedbackTimeoutRef.current)
-        evidenceFeedbackTimeoutRef.current = window.setTimeout(() => {
-          setEvidenceFeedback('')
-          setSubmittedEvidenceId('')
-        }, 2200)
-      } catch (apiError) {
-        setActionError(apiError.response?.data?.message ?? 'A API recusou a evidência.')
-      }
-      return
+      setTratto(data.tratto)
+      setEvidenceText('')
+      clearEvidencePhoto()
+      setEvidenceFeedback('Evidência protocolada.')
+      setSubmittedEvidenceId(data.evidence.id)
+      window.clearTimeout(evidenceFeedbackTimeoutRef.current)
+      evidenceFeedbackTimeoutRef.current = window.setTimeout(() => {
+        setEvidenceFeedback('')
+        setSubmittedEvidenceId('')
+      }, 2200)
+    } catch (apiError) {
+      setActionError(describeApiError(apiError, 'A API recusou a evidência.'))
     }
-
-    localEvidenceCounterRef.current += 1
-    const nextEvidenceId = `local-${localEvidenceCounterRef.current}`
-
-    setLocalEvidence((currentEvidence) => [
-      ...currentEvidence,
-      {
-        id: nextEvidenceId,
-        author: 'Você',
-        type: evidenceType,
-        content: evidenceText.trim() || 'Imagem anexada para perícia social.',
-        metadata: evidenceType === 'image' && evidencePhoto
-          ? { filename: evidencePhoto.filename, previewUrl: evidencePhoto.previewUrl }
-          : undefined,
-        createdAt: new Date().toLocaleString('pt-BR'),
-      },
-    ])
-    setEvidenceText('')
-    clearEvidencePhoto()
-    setEvidenceFeedback('Evidência protocolada no arquivo pixelado.')
-    setSubmittedEvidenceId(nextEvidenceId)
-    window.clearTimeout(evidenceFeedbackTimeoutRef.current)
-    evidenceFeedbackTimeoutRef.current = window.setTimeout(() => {
-      setEvidenceFeedback('')
-      setSubmittedEvidenceId('')
-    }, 2200)
   }
 
   async function answerInvite(decision) {
@@ -179,7 +176,7 @@ export function TrattoDetail() {
     setActionError('')
     try {
       const updated = await respondToInvite(tratto.id, myParticipant.id, decision)
-      setApiTratto(updated)
+      setTratto(updated)
     } catch (apiError) {
       setActionError(apiError.response?.data?.message ?? 'Não foi possível responder ao convite.')
     } finally {
@@ -192,7 +189,7 @@ export function TrattoDetail() {
     setActionError('')
     try {
       const updated = await requestJudgment(tratto.id)
-      setApiTratto(updated)
+      setTratto(updated)
     } catch (apiError) {
       setActionError(apiError.response?.data?.message ?? 'Não foi possível solicitar julgamento.')
     } finally {
@@ -216,7 +213,7 @@ export function TrattoDetail() {
         loserParticipantId: verdictForm.loser,
         summary: verdictForm.summary || undefined,
       })
-      setApiTratto(updated)
+      setTratto(updated)
       setVerdictForm({ winner: '', loser: '', summary: '' })
     } catch (apiError) {
       setActionError(apiError.response?.data?.message ?? 'Veredito recusado pela API.')
@@ -230,7 +227,7 @@ export function TrattoDetail() {
     setActionError('')
     try {
       const updated = await completeTratto(tratto.id)
-      setApiTratto(updated)
+      setTratto(updated)
     } catch (apiError) {
       setActionError(apiError.response?.data?.message ?? 'Não foi possível encerrar o trato.')
     } finally {
@@ -434,7 +431,7 @@ export function TrattoDetail() {
 
         <aside className="stack stack--large">
           <Panel bodyClassName="stack" title="Detalhes do caso">
-              <InfoRow label="Partes" value={getParticipantNames(tratto).join(' contra ')} />
+              <InfoRow label="Partes" value={participantNames.join(" contra ")} />
               <InfoRow label="Prazo" value={tratto.deadline} />
               <InfoRow label="Registrado em" value={tratto.createdAt} />
               <InfoRow label="Consequência" value={tratto.consequence} />
